@@ -134,18 +134,21 @@ export const CalendarScreen = ({ route }: any) => {
                                     </Text>
                                 ) : (
                                     <View style={styles.calendarActions}>
-                                        <Button
-                                            title="Mark Complete"
-                                            variant="secondary"
-                                            onPress={() => handleMarkComplete(item.id)}
-                                            style={{ flex: 1, marginRight: 8 }}
-                                            size="small"
-                                        />
                                         <TouchableOpacity
-                                            style={[styles.removeBtn, { borderColor: theme.colors.error + '40' }]}
-                                            onPress={() => handleRemoveScheduled(item)}
+                                            style={[styles.completeBtn, { backgroundColor: theme.colors.secondary }]}
+                                            onPress={() => handleMarkComplete(item.id)}
+                                            activeOpacity={0.8}
                                         >
-                                            <MaterialCommunityIcons name="delete-outline" size={18} color={theme.colors.error} />
+                                            <MaterialCommunityIcons name="check-circle-outline" size={18} color={theme.colors.white} />
+                                            <Text style={[theme.typography.caption, { color: theme.colors.white, marginLeft: 6, fontWeight: '600' }]}>Mark Complete</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[styles.removeScheduleBtn, { borderColor: theme.colors.error + '50', backgroundColor: theme.colors.error + '10' }]}
+                                            onPress={() => handleRemoveScheduled(item)}
+                                            activeOpacity={0.8}
+                                        >
+                                            <MaterialCommunityIcons name="trash-can-outline" size={18} color={theme.colors.error} />
+                                            <Text style={[theme.typography.caption, { color: theme.colors.error, marginLeft: 6, fontWeight: '600' }]}>Remove</Text>
                                         </TouchableOpacity>
                                     </View>
                                 )}
@@ -171,9 +174,13 @@ const styles = StyleSheet.create({
     agendaSection: { flex: 1 },
     emptyState: { padding: 32, alignItems: 'center' },
     activityWrap: { marginBottom: 0 },
-    calendarActions: { flexDirection: 'row', alignItems: 'center', marginTop: -8, marginBottom: 16 },
-    removeBtn: {
-        width: 40, height: 40, borderRadius: 20, borderWidth: 1,
-        alignItems: 'center', justifyContent: 'center',
+    calendarActions: { flexDirection: 'row', alignItems: 'center', marginTop: 4, marginBottom: 16, gap: 10 },
+    completeBtn: {
+        flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        paddingVertical: 10, borderRadius: 12,
+    },
+    removeScheduleBtn: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        paddingVertical: 10, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1,
     },
 });

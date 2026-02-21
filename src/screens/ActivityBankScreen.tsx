@@ -107,15 +107,15 @@ export const ActivityBankScreen = ({ navigation }: any) => {
                 renderItem={({ item }) => (
                     <View style={styles.cardWrapper}>
                         <ActivityCard activity={item} expanded={false} onPress={() => { setSelectedActivity(item); setModalVisible(true); }} />
-                        {activeTab === 'custom' && (
+                        {activeTab === 'custom' ? (
                             <TouchableOpacity
-                                style={[styles.deleteBtn, { borderColor: theme.colors.error + '40' }]}
+                                style={[styles.cardDeleteOverlay, { backgroundColor: theme.colors.error }]}
                                 onPress={() => handleDelete(item)}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             >
-                                <MaterialCommunityIcons name="delete-outline" size={18} color={theme.colors.error} />
-                                <Text style={[theme.typography.caption, { color: theme.colors.error, marginLeft: 4 }]}>Delete</Text>
+                                <MaterialCommunityIcons name="trash-can-outline" size={16} color={theme.colors.white} />
                             </TouchableOpacity>
-                        )}
+                        ) : null}
                     </View>
                 )}
                 ListEmptyComponent={
@@ -164,10 +164,11 @@ const styles = StyleSheet.create({
         paddingVertical: 12, paddingBottom: 10,
     },
     listContent: { padding: 16, paddingBottom: 80 },
-    cardWrapper: { marginBottom: 16 },
-    deleteBtn: {
-        flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end',
-        paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, marginTop: 6,
+    cardWrapper: { marginBottom: 16, position: 'relative' },
+    cardDeleteOverlay: {
+        position: 'absolute', bottom: 26, right: 10,
+        width: 32, height: 32, borderRadius: 16,
+        alignItems: 'center', justifyContent: 'center',
     },
     emptyState: { alignItems: 'center', paddingTop: 60 },
     fab: {
