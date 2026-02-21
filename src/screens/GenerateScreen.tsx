@@ -58,7 +58,7 @@ export const GenerateScreen = ({ route, navigation }: any) => {
     React.useLayoutEffect(() => {
         navigation.setOptions({
             headerRight: () => (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: -4 }}>
                     {(category || duration || budgetLevel) && (
                         <TouchableOpacity
                             onPress={clearFilters}
@@ -70,6 +70,7 @@ export const GenerateScreen = ({ route, navigation }: any) => {
                     )}
                     <TouchableOpacity
                         onPress={() => setSettingsVisible(true)}
+                        style={{ marginRight: 20 }}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
                         <MaterialCommunityIcons name="cog-outline" size={24} color={theme.colors.iconDefault} />
