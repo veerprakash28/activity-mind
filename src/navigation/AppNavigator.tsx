@@ -1,4 +1,5 @@
 import React from 'react';
+import { TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -11,9 +12,11 @@ import { FavoritesScreen } from '../screens/FavoritesScreen';
 import { InsightsScreen } from '../screens/InsightsScreen';
 import { ActivityBankScreen } from '../screens/ActivityBankScreen';
 import { AddActivityScreen } from '../screens/AddActivityScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+const RootStack = createNativeStackNavigator();
 
 // Stack for Activity Bank with Add Activity
 const ActivityBankStack = () => {
@@ -32,7 +35,7 @@ const ActivityBankStack = () => {
     );
 };
 
-export const AppNavigator = () => {
+const TabNavigator = () => {
     const { theme } = useAppContext();
 
     return (
@@ -60,13 +63,22 @@ export const AppNavigator = () => {
             <Tab.Screen
                 name="Dashboard"
                 component={HomeScreen}
-                options={{
+                options={({ navigation }: any) => ({
                     tabBarIcon: ({ color, size }: { color: string; size: number }) => (
                         <MaterialCommunityIcons name="view-dashboard" size={size} color={color} />
                     ),
                     headerTitle: 'Activity Mind',
-                    headerTitleAlign: 'left',
-                }}
+                    headerTitleAlign: 'left' as const,
+                    headerRight: () => (
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Settings')}
+                            style={{ marginRight: 16 }}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                            <MaterialCommunityIcons name="cog-outline" size={24} color={theme.colors.iconDefault} />
+                        </TouchableOpacity>
+                    ),
+                })}
             />
             <Tab.Screen
                 name="Generate"
@@ -86,7 +98,6 @@ export const AppNavigator = () => {
                         <MaterialCommunityIcons name="book-open-variant" size={size} color={color} />
                     ),
                     headerTitle: 'Activity Bank',
-                    headerRight: () => null, // We add the + button inside the screen
                 }}
             />
             <Tab.Screen
@@ -120,5 +131,16 @@ export const AppNavigator = () => {
                 }}
             />
         </Tab.Navigator>
+    );
+};
+
+export const AppNavigator = () => {
+    const { theme } = useAppContext();
+
+    return (
+        <RootStack.Navigator screenOptions={{ headerStyle: { backgroundColor: theme.colors.surface }, headerTintColor: theme.colors.text, headerTitleStyle: theme.typography.h3 }}>
+            <RootStack.Screen name="Tabs" component={TabNavigator} options={{ headerShown: false }} />
+            <RootStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+        </RootStack.Navigator>
     );
 };

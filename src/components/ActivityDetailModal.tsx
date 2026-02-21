@@ -170,13 +170,18 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0,0,0,0.15)',
         justifyContent: 'flex-end',
     },
     modalContainer: {
         maxHeight: SCREEN_HEIGHT * 0.85,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 10,
     },
     modalHeader: {
         flexDirection: 'row',
