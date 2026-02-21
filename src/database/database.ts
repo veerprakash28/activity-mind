@@ -154,6 +154,12 @@ export const getAllActivities = async () => {
     return await db.getAllAsync<Activity>(`SELECT * FROM activities`);
 };
 
+export const getUniqueCategories = async () => {
+    const db = await getDb();
+    const result = await db.getAllAsync<{ category: string }>(`SELECT DISTINCT category FROM activities ORDER BY category ASC`);
+    return result.map(r => r.category);
+};
+
 // Get recent history (for 30 day checks and dashboard)
 export const getRecentHistory = async (days = 30) => {
     const db = await getDb();

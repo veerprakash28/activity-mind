@@ -93,6 +93,19 @@ src/
 | ⭐ Recognition | Appreciate and celebrate colleagues |
 | 🎉 Festival | Seasonal and cultural celebrations |
 
+## How to Add New Categories
+
+The app now supports a **Dynamic Category System**. You no longer need to edit code to add a new category!
+
+1.  Navigate to the **Bank** tab.
+2.  Tap the **+** (plus) icon in the bottom right to add a new custom activity.
+3.  In the **Category** section, scroll to the end of the list and tap **+ Add New**.
+4.  Type your new category name (e.g., **Food** or **Offsite**).
+5.  Save the activity. The new category will now automatically appear in the **Generate** and **Home** screen filters!
+
+> [!TIP]
+> Custom categories work exactly like built-in ones. The "Smart Generator" will immediately start including them in AI recommendations.
+
 ## License
 
 MIT

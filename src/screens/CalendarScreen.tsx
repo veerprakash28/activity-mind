@@ -92,6 +92,7 @@ export const CalendarScreen = ({ route }: any) => {
 
                 <View style={[styles.calendarWrap, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                     <Calendar
+                        key={theme.isDark ? 'dark-calendar' : 'light-calendar'}
                         current={selectedDate}
                         onDayPress={handleDayPress}
                         markedDates={markedDates}
@@ -105,7 +106,7 @@ export const CalendarScreen = ({ route }: any) => {
                             dayTextColor: theme.colors.text,
                             textDisabledColor: theme.colors.border,
                             dotColor: theme.colors.primary,
-                            selectedDotColor: theme.colors.primary,
+                            selectedDotColor: theme.colors.white,
                             arrowColor: theme.colors.primary,
                             monthTextColor: theme.colors.text,
                             indicatorColor: theme.colors.primary,

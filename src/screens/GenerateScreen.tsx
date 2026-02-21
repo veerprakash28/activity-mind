@@ -11,7 +11,7 @@ import { generateActivities, FilterParams, SmartEngineResult } from '../database
 import { saveHistory, toggleFavorite, isFavorite, Activity } from '../database/database';
 
 export const GenerateScreen = ({ route }: any) => {
-    const { theme, organization } = useAppContext();
+    const { theme, organization, categories } = useAppContext();
 
     // Filters state
     const [category, setCategory] = useState<string | undefined>(route?.params?.preSelectedCategory);
@@ -64,13 +64,17 @@ export const GenerateScreen = ({ route }: any) => {
         setShowDatePicker(true);
     };
 
-    const handleDateChange = async (_event: any, date?: Date) => {
+    const handleDateChange = async (event: any, date?: Date) => {
         if (Platform.OS === 'android') {
             setShowDatePicker(false);
+            if (event.type === 'dismissed') {
+                setSchedulingActivity(null);
+                return;
+            }
         }
         if (date && schedulingActivity) {
             setSelectedDate(date);
-            if (Platform.OS === 'android') {
+            if (Platform.OS === 'android' && event.type === 'set') {
                 // On Android, picker dismisses on selection
                 date.setHours(12, 0, 0, 0);
                 await saveHistory(schedulingActivity.id, date.toISOString());
@@ -102,7 +106,7 @@ export const GenerateScreen = ({ route }: any) => {
 
             <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginBottom: theme.spacing.xs }]}>Category</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
-                {['Icebreaker', 'Team Bonding', 'Wellness', 'Training', 'Recognition', 'Festival'].map(cat => (
+                {categories.map(cat => (
                     <FilterChip key={cat} label={cat} selected={category === cat} onPress={() => setCategory(category === cat ? undefined : cat)} />
                 ))}
             </ScrollView>

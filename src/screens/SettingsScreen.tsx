@@ -23,7 +23,7 @@ const COLOR_PRESETS = [
 const isValidHex = (hex: string) => /^#([0-9A-Fa-f]{6})$/.test(hex);
 
 export const SettingsScreen = ({ navigation }: any) => {
-    const { theme, organization, setOrganization, customColors, setCustomColors } = useAppContext();
+    const { theme, preferences, setThemePreference, organization, setOrganization, customColors, setCustomColors } = useAppContext();
 
     const [activeTab, setActiveTab] = useState<'org' | 'theme'>('org');
 
@@ -35,6 +35,7 @@ export const SettingsScreen = ({ navigation }: any) => {
     const [industry, setIndustry] = useState(organization?.industry || '');
 
     // Theme fields
+    const [themeModePref, setThemeModePref] = useState(preferences.theme);
     const [selectedPrimary, setSelectedPrimary] = useState(customColors.primary || '#2563EB');
     const [selectedSecondary, setSelectedSecondary] = useState(customColors.secondary || '#7C3AED');
     const [primaryHex, setPrimaryHex] = useState(customColors.primary || '#2563EB');
@@ -56,10 +57,11 @@ export const SettingsScreen = ({ navigation }: any) => {
 
     const hasThemeChanges = useMemo(() => {
         return (
+            themeModePref !== preferences.theme ||
             selectedPrimary !== (customColors.primary || '#2563EB') ||
             selectedSecondary !== (customColors.secondary || '#7C3AED')
         );
-    }, [selectedPrimary, selectedSecondary, customColors]);
+    }, [themeModePref, selectedPrimary, selectedSecondary, customColors, preferences.theme]);
 
     const hasUnsavedChanges = activeTab === 'org' ? hasOrgChanges : hasThemeChanges;
 
@@ -120,10 +122,13 @@ export const SettingsScreen = ({ navigation }: any) => {
         }
         setSaving(true);
         try {
-            await setCustomColors({ primary: selectedPrimary, secondary: selectedSecondary });
-            Alert.alert("Saved!", "Theme colors updated. The app will now use your custom colors.");
+            await Promise.all([
+                setThemePreference(themeModePref),
+                setCustomColors({ primary: selectedPrimary, secondary: selectedSecondary })
+            ]);
+            Alert.alert("Saved!", "Theme settings updated.");
         } catch (e) {
-            Alert.alert("Error", "Failed to save theme.");
+            Alert.alert("Error", "Failed to save theme settings.");
         } finally {
             setSaving(false);
         }
@@ -211,13 +216,26 @@ export const SettingsScreen = ({ navigation }: any) => {
                     </View>
                 </View>
                 <Button
-                    title={hasThemeChanges ? "Apply Colors" : "Applied"}
+                    title={hasThemeChanges ? "Apply Theme" : "Theme Applied"}
                     onPress={handleSaveTheme}
                     loading={saving}
                     disabled={!hasThemeChanges}
                     style={{ marginTop: 16, width: '100%' }}
                     size="small"
                 />
+            </View>
+
+            {/* Theme Mode */}
+            <Text style={[theme.typography.h4, { color: theme.colors.text, marginTop: 20 }]}>Appearance</Text>
+            <View style={[styles.chipRow, { marginTop: 10 }]}>
+                {(['light', 'dark', 'system'] as const).map(mode => (
+                    <FilterChip
+                        key={mode}
+                        label={mode.charAt(0).toUpperCase() + mode.slice(1)}
+                        selected={themeModePref === mode}
+                        onPress={() => setThemeModePref(mode)}
+                    />
+                ))}
             </View>
 
             {/* Primary Color */}

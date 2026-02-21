@@ -11,7 +11,7 @@ import { ActivityDetailModal } from '../components/ActivityDetailModal';
 import { getActivityStats, getUpcomingActivity, Activity, ActivityHistory, getDb } from '../database/database';
 
 export const HomeScreen = () => {
-    const { theme, organization } = useAppContext();
+    const { theme, organization, categories: dynamicCategories } = useAppContext();
     const navigation = useNavigation();
 
     const [refreshing, setRefreshing] = useState(false);
@@ -48,14 +48,24 @@ export const HomeScreen = () => {
         setRefreshing(false);
     };
 
-    const categories = [
-        { label: 'Icebreaker', icon: 'snowflake' },
-        { label: 'Team Bonding', icon: 'account-group' },
-        { label: 'Wellness', icon: 'leaf' },
-        { label: 'Recognition', icon: 'star-face' },
-        { label: 'Festival', icon: 'party-popper' },
-        { label: 'Training', icon: 'school' },
-    ];
+    const getCategoryIcon = (label: string): any => {
+        const mapping: Record<string, string> = {
+            'Icebreaker': 'snowflake',
+            'Team Bonding': 'account-group',
+            'Wellness': 'leaf',
+            'Recognition': 'star-face',
+            'Festival': 'party-popper',
+            'Training': 'school',
+            'Sports': 'trophy',
+            'Food': 'food-apple',
+        };
+        return mapping[label] || 'tag-outline';
+    };
+
+    const categories = dynamicCategories.slice(0, 8).map(cat => ({
+        label: cat,
+        icon: getCategoryIcon(cat)
+    }));
 
     const handleQuickFilter = (category: string) => {
         // @ts-ignore

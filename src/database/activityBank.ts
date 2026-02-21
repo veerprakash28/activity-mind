@@ -683,4 +683,105 @@ export const INITIAL_ACTIVITIES = [
         indoor_outdoor: "Indoor",
         remote_compatible: 1
     },
+    // =========== SPORTS ===========
+    {
+        name: "Corporate Olympics",
+        description: "A multi-event competition including relay races, tug-of-war, and fun office-friendly physical challenges.",
+        category: "Sports",
+        steps: JSON.stringify([
+            "Divide the team into 4-5 balanced groups.",
+            "Set up 5 stations: Sack race, Egg-and-spoon, Tug-of-war, Office chair relay, and Basketball shootout.",
+            "Each team competes at each station to earn points.",
+            "Tally the scores and host a medal ceremony."
+        ]),
+        materials: JSON.stringify(["Stopwatch", "Whistle", "Rope", "Sacks", "Plastic eggs and spoons"]),
+        estimated_cost: "Medium",
+        duration: "Half day",
+        difficulty: "Hard",
+        prep_time: "1 hr",
+        min_employees: 10,
+        max_employees: 500,
+        indoor_outdoor: "Outdoor",
+        remote_compatible: 0
+    },
+    {
+        name: "Ping Pong Tournament",
+        description: "A fast-paced single-elimination tournament for all skill levels.",
+        category: "Sports",
+        steps: JSON.stringify([
+            "Create a bracket (use an online tool or whiteboard).",
+            "Set up 1-2 ping pong tables in a common area.",
+            "Play 11-point games to keep it moving fast.",
+            "Finalists play a best-of-three series for the championship."
+        ]),
+        materials: JSON.stringify(["Ping pong tables", "Paddles", "Balls", "Bracket board"]),
+        estimated_cost: "Low",
+        duration: "1 hr",
+        difficulty: "Medium",
+        prep_time: "15 min",
+        min_employees: 4,
+        max_employees: 32,
+        indoor_outdoor: "Indoor",
+        remote_compatible: 0
+    },
+    {
+        name: "Mini-Golf Office Course",
+        description: "Build a custom 9-hole mini-golf course using office supplies and navigate through the workplace.",
+        category: "Sports",
+        steps: JSON.stringify([
+            "Each department designs and builds one 'hole' using boxes, books, and office supplies.",
+            "Provide putters and golf balls to participants.",
+            "Teams of 4 rotate through the course, keeping track of their strokes.",
+            "Winner with the lowest score gets a small trophy."
+        ]),
+        materials: JSON.stringify(["Putters", "Golf balls", "Cardboard boxes", "Tape", "Obstacles"]),
+        estimated_cost: "Low",
+        duration: "2 hr",
+        difficulty: "Medium",
+        prep_time: "1 hr",
+        min_employees: 4,
+        max_employees: 100,
+        indoor_outdoor: "Indoor",
+        remote_compatible: 0
+    },
+    {
+        name: "Desktop Yoga Session",
+        description: "A gentle series of stretches and poses focused on relieving office-related tension and improving posture.",
+        category: "Sports",
+        steps: JSON.stringify([
+            "Hire an instructor or use a guided video.",
+            "Focus on neck, shoulder, and back stretches that can be done at a desk.",
+            "Hold each pose for 30-60 seconds while breathing deeply.",
+            "End with a 5-minute guided meditation."
+        ]),
+        materials: JSON.stringify(["None", "Optional: Yoga mats"]),
+        estimated_cost: "Low",
+        duration: "30 min",
+        difficulty: "Easy",
+        prep_time: "5 min",
+        min_employees: 2,
+        max_employees: 500,
+        indoor_outdoor: "Indoor",
+        remote_compatible: 1
+    },
+    {
+        name: "Indoor Cricket League",
+        description: "A fun, modified version of cricket designed for indoor spaces with soft balls.",
+        category: "Sports",
+        steps: JSON.stringify([
+            "Set up a small pitch using soft-tech or tennis balls.",
+            "Divide into two teams of 6-8 players.",
+            "Each team bats for 5 overs.",
+            "Runs are scored by hitting specific wall areas or running between wickets."
+        ]),
+        materials: JSON.stringify(["Plastic bat", "Soft ball", "Wickets (or chairs)"]),
+        estimated_cost: "Low",
+        duration: "1 hr",
+        difficulty: "Medium",
+        prep_time: "15 min",
+        min_employees: 8,
+        max_employees: 20,
+        indoor_outdoor: "Indoor",
+        remote_compatible: 0
+    },
 ];

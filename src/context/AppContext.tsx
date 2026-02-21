@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeType, getTheme, Theme, CustomColors } from '../theme';
+import { getUniqueCategories } from '../database/database';
 
 interface Organization {
     companyName: string;
@@ -37,6 +38,10 @@ interface AppContextData {
 
     // Pro Status
     unlockPro: () => void;
+
+    // Categories
+    categories: string[];
+    refreshCategories: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextData | undefined>(undefined);
@@ -52,6 +57,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const [organization, setOrganizationState] = useState<Organization | null>(null);
     const [isFirstLaunch, setIsFirstLaunchState] = useState<boolean>(true);
     const [customColors, setCustomColorsState] = useState<CustomColors>({});
+    const [categories, setCategories] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     // Load initial data
@@ -69,6 +75,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 if (orgJson) setOrganizationState(JSON.parse(orgJson));
                 if (firstLaunchStr === 'false') setIsFirstLaunchState(false);
                 if (colorsJson) setCustomColorsState(JSON.parse(colorsJson));
+
+                // Load initial categories
+                const cats = await getUniqueCategories();
+                setCategories(cats);
 
             } catch (e) {
                 console.error('Failed to load app data', e);
@@ -107,6 +117,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(newPrefs));
     };
 
+    const refreshCategories = async () => {
+        const cats = await getUniqueCategories();
+        setCategories(cats);
+    };
+
     const activeThemeMode = preferences.theme === 'system'
         ? (systemColorScheme || 'light')
         : preferences.theme;
@@ -130,7 +145,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 setIsFirstLaunch,
                 organization,
                 setOrganization,
-                unlockPro
+                unlockPro,
+                categories,
+                refreshCategories
             }}
         >
             {children}

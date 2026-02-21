@@ -7,7 +7,7 @@ import { Button } from '../components/Button';
 import { FilterChip } from '../components/FilterChip';
 
 export const AddActivityScreen = ({ navigation }: any) => {
-    const { theme } = useAppContext();
+    const { theme, categories, refreshCategories } = useAppContext();
 
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -20,6 +20,9 @@ export const AddActivityScreen = ({ navigation }: any) => {
     const [prepTime, setPrepTime] = useState('None');
     const [remoteCompatible, setRemoteCompatible] = useState(true);
     const [saving, setSaving] = useState(false);
+
+    const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+    const [newCategoryName, setNewCategoryName] = useState('');
 
     const handleSave = async () => {
         if (!name.trim()) {
@@ -36,10 +39,17 @@ export const AddActivityScreen = ({ navigation }: any) => {
             const stepsArray = steps.split('\n').filter(s => s.trim());
             const materialsArray = materials.split('\n').filter(m => m.trim());
 
+            const finalCategory = showNewCategoryInput ? newCategoryName.trim() : category;
+            if (showNewCategoryInput && !newCategoryName.trim()) {
+                Alert.alert("Required", "Please enter a new category name.");
+                setSaving(false);
+                return;
+            }
+
             await addCustomActivity({
                 name: name.trim(),
                 description: description.trim(),
-                category,
+                category: finalCategory,
                 steps: JSON.stringify(stepsArray.length > 0 ? stepsArray : ["No specific steps provided"]),
                 materials: JSON.stringify(materialsArray.length > 0 ? materialsArray : ["None"]),
                 estimated_cost: budget,
@@ -51,6 +61,8 @@ export const AddActivityScreen = ({ navigation }: any) => {
                 indoor_outdoor: 'Both',
                 remote_compatible: remoteCompatible ? 1 : 0,
             });
+
+            await refreshCategories();
 
             Alert.alert("Saved!", "Your custom activity has been added to the bank.", [
                 { text: "OK", onPress: () => navigation.goBack() }
@@ -97,15 +109,31 @@ export const AddActivityScreen = ({ navigation }: any) => {
 
                     <Text style={labelStyle}>Category</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {['Icebreaker', 'Team Bonding', 'Wellness', 'Training', 'Recognition', 'Festival'].map(cat => (
+                        {categories.map(cat => (
                             <FilterChip
                                 key={cat}
                                 label={cat}
-                                selected={category === cat}
-                                onPress={() => setCategory(cat)}
+                                selected={category === cat && !showNewCategoryInput}
+                                onPress={() => { setCategory(cat); setShowNewCategoryInput(false); }}
                             />
                         ))}
+                        <FilterChip
+                            label="+ Add New"
+                            selected={showNewCategoryInput}
+                            onPress={() => setShowNewCategoryInput(true)}
+                        />
                     </ScrollView>
+
+                    {showNewCategoryInput && (
+                        <TextInput
+                            style={[inputStyle, { marginTop: 10 }]}
+                            placeholder="Enter new category name (e.g. Food)"
+                            placeholderTextColor={theme.colors.textSecondary}
+                            value={newCategoryName}
+                            onChangeText={setNewCategoryName}
+                            autoFocus
+                        />
+                    )}
 
                     <Text style={labelStyle}>Steps (one per line)</Text>
                     <TextInput
