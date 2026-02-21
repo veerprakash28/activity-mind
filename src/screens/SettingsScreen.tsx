@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
 import { Button } from '../components/Button';
@@ -43,7 +44,7 @@ export const SettingsScreen = ({ navigation }: any) => {
     const labelStyle = [theme.typography.caption, { color: theme.colors.textSecondary, marginBottom: 6, marginTop: 18 }];
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
 
                 <View style={[styles.profileCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
@@ -86,7 +87,7 @@ export const SettingsScreen = ({ navigation }: any) => {
                 <Button title="Save Changes" onPress={handleSave} loading={saving} style={{ marginTop: 28, marginBottom: 40 }} />
 
             </ScrollView>
-        </View>
+        </SafeAreaView>
     );
 };
 
