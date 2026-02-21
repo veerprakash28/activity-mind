@@ -117,7 +117,15 @@ export const HomeScreen = () => {
                 {/* Upcoming */}
                 {upcoming ? (
                     <View style={styles.section}>
-                        <Text style={[theme.typography.h3, { color: theme.colors.text, marginBottom: theme.spacing.sm }]}>Upcoming</Text>
+                        <View style={styles.sectionHeader}>
+                            <Text style={[theme.typography.h3, { color: theme.colors.text }]}>Upcoming</Text>
+                            <View style={[styles.dateBadge, { backgroundColor: theme.colors.primaryLight }]}>
+                                <MaterialCommunityIcons name="calendar" size={14} color={theme.colors.primary} />
+                                <Text style={[theme.typography.caption, { color: theme.colors.primary, marginLeft: 4, fontWeight: '700' }]}>
+                                    {new Date(upcoming.scheduled_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                </Text>
+                            </View>
+                        </View>
                         <ActivityCard
                             activity={upcoming}
                             onPress={() => setModalVisible(true)}
@@ -160,5 +168,18 @@ const styles = StyleSheet.create({
     ctaContainer: { padding: 24, borderRadius: 20, borderWidth: 1, marginBottom: 32 },
     ctaTextContainer: { paddingRight: 20 },
     section: { marginBottom: 32 },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    dateBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
     filterWrap: { flexDirection: 'row', flexWrap: 'wrap' },
 });

@@ -23,7 +23,7 @@ const COLOR_PRESETS = [
 const isValidHex = (hex: string) => /^#([0-9A-Fa-f]{6})$/.test(hex);
 
 export const SettingsScreen = ({ navigation }: any) => {
-    const { theme, preferences, setThemePreference, organization, setOrganization, customColors, setCustomColors } = useAppContext();
+    const { theme, preferences, setThemePreference, setGenerationCount, organization, setOrganization, customColors, setCustomColors } = useAppContext();
 
     const [activeTab, setActiveTab] = useState<'org' | 'theme'>('org');
 
@@ -40,20 +40,21 @@ export const SettingsScreen = ({ navigation }: any) => {
     const [selectedSecondary, setSelectedSecondary] = useState(customColors.secondary || '#7C3AED');
     const [primaryHex, setPrimaryHex] = useState(customColors.primary || '#2563EB');
     const [secondaryHex, setSecondaryHex] = useState(customColors.secondary || '#7C3AED');
+    const [genCountPref, setGenCountPref] = useState(preferences.generationCount || 3);
 
     const [saving, setSaving] = useState(false);
 
     // Detect unsaved changes
     const hasOrgChanges = useMemo(() => {
-        if (!organization) return companyName.trim() !== '' || employeeCount.trim() !== '' || industry.trim() !== '';
-        return (
+        const baseChanges = !organization ? (companyName.trim() !== '' || employeeCount.trim() !== '' || industry.trim() !== '') : (
             companyName !== (organization.companyName || '') ||
             employeeCount !== (organization.employeeCount?.toString() || '') ||
             workType !== (organization.workType || 'Hybrid') ||
             budgetRange !== (organization.budgetRange || 'Medium') ||
             industry !== (organization.industry || '')
         );
-    }, [companyName, employeeCount, workType, budgetRange, industry, organization]);
+        return baseChanges || genCountPref !== preferences.generationCount;
+    }, [companyName, employeeCount, workType, budgetRange, industry, organization, genCountPref, preferences.generationCount]);
 
     const hasThemeChanges = useMemo(() => {
         return (
@@ -96,14 +97,17 @@ export const SettingsScreen = ({ navigation }: any) => {
         }
         setSaving(true);
         try {
-            await setOrganization({
-                companyName: companyName.trim(),
-                employeeCount: parseInt(employeeCount) || 0,
-                workType,
-                budgetRange,
-                industry: industry.trim(),
-            });
-            Alert.alert("Saved!", "Organization profile updated.");
+            await Promise.all([
+                setOrganization({
+                    companyName: companyName.trim(),
+                    employeeCount: parseInt(employeeCount) || 0,
+                    workType,
+                    budgetRange,
+                    industry: industry.trim(),
+                }),
+                setGenerationCount(genCountPref)
+            ]);
+            Alert.alert("Saved!", "Organization profile and preferences updated.");
         } catch (e) {
             Alert.alert("Error", "Failed to save changes.");
         } finally {
@@ -199,6 +203,25 @@ export const SettingsScreen = ({ navigation }: any) => {
 
             <Text style={labelStyle}>Industry</Text>
             <TextInput style={inputStyle} value={industry} onChangeText={setIndustry} placeholder="e.g. Technology" placeholderTextColor={theme.colors.textSecondary} />
+
+            <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
+                <Text style={[theme.typography.h4, { color: theme.colors.text }]}>AI Preferences</Text>
+                <Text style={[theme.typography.body2, { color: theme.colors.textSecondary, marginTop: 4 }]}>
+                    Customize how activity ideas are generated
+                </Text>
+
+                <Text style={[theme.typography.h4, { color: theme.colors.text, marginTop: 20 }]}>Ideas per Generation</Text>
+                <View style={[styles.chipRow, { marginTop: 10 }]}>
+                    {[1, 2, 3, 4, 5, 6].map(num => (
+                        <FilterChip
+                            key={num}
+                            label={num.toString()}
+                            selected={genCountPref === num}
+                            onPress={() => setGenCountPref(num)}
+                        />
+                    ))}
+                </View>
+            </View>
         </ScrollView>
     );
 
@@ -237,6 +260,7 @@ export const SettingsScreen = ({ navigation }: any) => {
                     />
                 ))}
             </View>
+
 
             {/* Primary Color */}
             <Text style={[theme.typography.h4, { color: theme.colors.text, marginTop: 20 }]}>Primary Color</Text>

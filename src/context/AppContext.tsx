@@ -15,6 +15,7 @@ interface Organization {
 interface Preferences {
     theme: ThemeType | 'system';
     isPro: boolean;
+    generationCount: number;
 }
 
 interface AppContextData {
@@ -23,6 +24,7 @@ interface AppContextData {
     themeMode: ThemeType;
     preferences: Preferences;
     setThemePreference: (mode: ThemeType | 'system') => void;
+    setGenerationCount: (count: number) => Promise<void>;
 
     // Custom Colors
     customColors: CustomColors;
@@ -53,7 +55,7 @@ const CUSTOM_COLORS_KEY = '@ActivityMind_CustomColors';
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
     const systemColorScheme = useColorScheme() as ThemeType;
-    const [preferences, setPreferences] = useState<Preferences>({ theme: 'system', isPro: false });
+    const [preferences, setPreferences] = useState<Preferences>({ theme: 'system', isPro: false, generationCount: 3 });
     const [organization, setOrganizationState] = useState<Organization | null>(null);
     const [isFirstLaunch, setIsFirstLaunchState] = useState<boolean>(true);
     const [customColors, setCustomColorsState] = useState<CustomColors>({});
@@ -91,6 +93,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     const setThemePreference = async (theme: ThemeType | 'system') => {
         const newPrefs = { ...preferences, theme };
+        setPreferences(newPrefs);
+        await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(newPrefs));
+    };
+
+    const setGenerationCount = async (count: number) => {
+        const newPrefs = { ...preferences, generationCount: count };
         setPreferences(newPrefs);
         await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(newPrefs));
     };
@@ -147,7 +155,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 setOrganization,
                 unlockPro,
                 categories,
-                refreshCategories
+                refreshCategories,
+                setGenerationCount
             }}
         >
             {children}

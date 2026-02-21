@@ -11,7 +11,7 @@ import { generateActivities, FilterParams, SmartEngineResult } from '../database
 import { saveHistory, toggleFavorite, isFavorite, Activity } from '../database/database';
 
 export const GenerateScreen = ({ route }: any) => {
-    const { theme, organization, categories } = useAppContext();
+    const { theme, organization, categories, preferences } = useAppContext();
 
     // Filters state
     const [category, setCategory] = useState<string | undefined>(route?.params?.preSelectedCategory);
@@ -32,13 +32,21 @@ export const GenerateScreen = ({ route }: any) => {
     const [schedulingActivity, setSchedulingActivity] = useState<Activity | null>(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
 
+    // Auto-generate if pre-selected category is provided (from Dashboard)
+    React.useEffect(() => {
+        if (route?.params?.preSelectedCategory && !result && !loading) {
+            handleGenerate();
+        }
+    }, [route?.params?.preSelectedCategory]);
+
     const handleGenerate = async () => {
         setLoading(true);
         const filters: FilterParams = { category, duration, budgetLevel };
 
         try {
             await new Promise(res => setTimeout(res, 600));
-            const generationResult = await generateActivities(organization, filters, 3);
+            const count = preferences.generationCount || 3;
+            const generationResult = await generateActivities(organization, filters, count);
             setResult(generationResult);
 
             const favMap: Record<number, boolean> = {};

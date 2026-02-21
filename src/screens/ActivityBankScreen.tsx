@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
@@ -9,9 +9,10 @@ import { ActivityDetailModal } from '../components/ActivityDetailModal';
 import { FilterChip } from '../components/FilterChip';
 
 export const ActivityBankScreen = ({ navigation }: any) => {
-    const { theme } = useAppContext();
+    const { theme, categories } = useAppContext();
     const [activities, setActivities] = useState<Activity[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
     const [activeTab, setActiveTab] = useState<'built-in' | 'custom'>('built-in');
     const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
@@ -54,8 +55,13 @@ export const ActivityBankScreen = ({ navigation }: any) => {
     const currentList = activeTab === 'built-in' ? builtInActivities : customActivities;
 
     const filteredActivities = currentList.filter(a => {
-        if (!searchQuery) return true;
-        return a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.description.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSearch = !searchQuery ||
+            a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            a.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+        const matchesCategory = !selectedCategory || a.category === selectedCategory;
+
+        return matchesSearch && matchesCategory;
     });
 
     return (
@@ -75,6 +81,25 @@ export const ActivityBankScreen = ({ navigation }: any) => {
                         <MaterialCommunityIcons name="close-circle" size={18} color={theme.colors.iconDefault} />
                     </TouchableOpacity>
                 ) : null}
+            </View>
+
+            {/* Category Filters */}
+            <View style={styles.categoryFilterContainer}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+                    <FilterChip
+                        label="All"
+                        selected={selectedCategory === undefined}
+                        onPress={() => setSelectedCategory(undefined)}
+                    />
+                    {categories.map(cat => (
+                        <FilterChip
+                            key={cat}
+                            label={cat}
+                            selected={selectedCategory === cat}
+                            onPress={() => setSelectedCategory(selectedCategory === cat ? undefined : cat)}
+                        />
+                    ))}
+                </ScrollView>
             </View>
 
             {/* Tabs */}
@@ -162,6 +187,12 @@ const styles = StyleSheet.create({
     tab: {
         flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
         paddingVertical: 12, paddingBottom: 10,
+    },
+    categoryFilterContainer: {
+        marginTop: 12,
+    },
+    categoryScroll: {
+        paddingHorizontal: 16,
     },
     listContent: { padding: 16, paddingBottom: 80 },
     cardWrapper: { marginBottom: 16, position: 'relative' },

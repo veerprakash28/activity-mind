@@ -82,11 +82,6 @@ export const AddActivityScreen = ({ navigation }: any) => {
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
                 <ScrollView contentContainerStyle={styles.scrollContent}>
 
-                    <View style={[styles.headerCard, { backgroundColor: theme.colors.primaryLight }]}>
-                        <MaterialCommunityIcons name="plus-circle-outline" size={28} color={theme.colors.primary} />
-                        <Text style={[theme.typography.h3, { color: theme.colors.primary, marginLeft: 10 }]}>Add Your Own Activity</Text>
-                    </View>
-
                     <Text style={labelStyle}>Activity Name *</Text>
                     <TextInput
                         style={inputStyle}
