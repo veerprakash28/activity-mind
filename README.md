@@ -5,51 +5,62 @@ An AI-powered HR activity generator built with React Native and Expo. Helps HR t
 ## Features
 
 - **Smart Activity Generator** – Get 3 curated activity ideas based on filters (category, duration, budget). Shuffle for new suggestions.
-- **Activity Bank** – Browse 30+ built-in activities across 6 categories with search and filters.
-- **Custom Activities** – Add your own activities with full details (steps, materials, budget, etc.).
-- **Calendar & Scheduling** – Schedule activities and track completion on a visual calendar.
-- **Favorites** – Save activities you love for quick access.
+- **Activity Bank** – Browse 30+ built-in activities split into **Built-in** and **Custom** tabs with counts.
+- **Custom Activities** – Add your own activities with full details (steps, materials, budget, duration, prep time, etc.).
+- **Calendar & Scheduling** – Schedule activities and track completion on a visual calendar. Remove items with one tap.
 - **Insights Dashboard** – View engagement trends, category breakdowns, and AI-powered suggestions based on your real activity history.
-- **Onboarding** – Quick setup flow to configure your organization profile.
-- **Dark Mode** – Full light/dark theme support.
+- **Custom Branding** – Choose your organization's primary and secondary colors using a **Hex color picker** or 12 preset swatches. Includes live preview.
+- **Tabbed Settings** – Organized settings for both Organization Profile and Theme Customization with **unsaved changes indicators**.
+- **Onboarding** – Interactive setup flow to tailor the app to your team.
+- **Dark Mode & Premium UI** – Vibrant, professional design with smooth transitions and haptic feedback.
 
 ## Tech Stack
 
-- **React Native** (Expo SDK)
+- **React Native** (Expo SDK 54)
 - **TypeScript**
 - **expo-sqlite** – Local database for offline-first storage
-- **@react-navigation** – Tab and stack navigation
+- **AsyncStorage** – Settings and theme persistence
+- **@react-navigation** – Nested tab and stack navigation
 - **react-native-chart-kit** – Charts for insights
-- **react-native-calendars** – Calendar component
+- **react-native-calendars** – Calendar integration
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+
-- npm or yarn
-- Expo CLI (`npm install -g expo-cli`)
-- Android emulator or physical device with Expo Go
+- **Node.js 20+**
+- **npm** or **yarn**
+- **Android Studio** (for local native builds)
+- **Java 17 (JDK)**
 
-### Installation
+### Installation & Development
 
 ```bash
-# Clone the repo
+# 1. Clone the repo
 git clone https://github.com/veerprakash28/activity-mind.git
 cd activity-mind
 
-# Install dependencies
+# 2. Install dependencies
 npm install
 
-# Start the dev server
-npx expo start --android --clear
+# 3. Start Expo (for Expo Go)
+npm run start
 ```
 
-### Running on Device
+### Local Android Build (Generate APK)
 
-1. Install **Expo Go** from the Play Store / App Store
-2. Run `npx expo start`
-3. Scan the QR code with Expo Go
+To build a standalone APK locally without using EAS:
+
+```bash
+# 1. Generate native android folder (if missing)
+npx expo prebuild --platform android
+
+# 2. Build the Release APK
+cd android && ./gradlew assembleRelease
+```
+
+**Output location:** `android/app/build/outputs/apk/release/app-release.apk`
+
 
 ## Project Structure
 
