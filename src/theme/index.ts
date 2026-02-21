@@ -113,16 +113,38 @@ export const shadows = {
 
 export type ThemeType = 'light' | 'dark';
 
-export const getTheme = (mode: ThemeType) => ({
-    colors: {
-        ...colors,
-        ...colors[mode],
-    },
-    spacing,
-    radius,
-    typography,
-    shadows: shadows[mode],
-    isDark: mode === 'dark'
-});
+export interface CustomColors {
+    primary?: string;
+    secondary?: string;
+}
+
+export const getTheme = (mode: ThemeType, customColors?: CustomColors) => {
+    const primary = customColors?.primary || colors.primary;
+    const secondary = customColors?.secondary || colors.secondary;
+
+    const modeColors = colors[mode];
+    const primaryLight = mode === 'dark'
+        ? primary + '26'  // ~15% opacity
+        : primary + '18'; // ~10% opacity
+    const secondaryLight = mode === 'dark'
+        ? secondary + '26'
+        : secondary + '18';
+
+    return {
+        colors: {
+            ...colors,
+            ...modeColors,
+            primary,
+            secondary,
+            primaryLight,
+            secondaryLight,
+        },
+        spacing,
+        radius,
+        typography,
+        shadows: shadows[mode],
+        isDark: mode === 'dark'
+    };
+};
 
 export type Theme = ReturnType<typeof getTheme>;
