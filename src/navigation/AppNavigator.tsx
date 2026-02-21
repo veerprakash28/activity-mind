@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, StatusBar, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -138,9 +138,22 @@ export const AppNavigator = () => {
     const { theme } = useAppContext();
 
     return (
-        <RootStack.Navigator screenOptions={{ headerStyle: { backgroundColor: theme.colors.surface }, headerTintColor: theme.colors.text, headerTitleStyle: theme.typography.h3 }}>
+        <RootStack.Navigator screenOptions={{
+            headerStyle: { backgroundColor: theme.colors.surface },
+            headerTintColor: theme.colors.text,
+            headerTitleStyle: theme.typography.h3,
+        }}>
             <RootStack.Screen name="Tabs" component={TabNavigator} options={{ headerShown: false }} />
-            <RootStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+            <RootStack.Screen
+                name="Settings"
+                component={SettingsScreen}
+                options={{
+                    title: 'Settings',
+                    headerStyle: {
+                        backgroundColor: theme.colors.surface,
+                    },
+                }}
+            />
         </RootStack.Navigator>
     );
 };

@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, Alert, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
 import { Button } from '../components/Button';
@@ -262,7 +261,7 @@ export const SettingsScreen = ({ navigation }: any) => {
     );
 
     return (
-        <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             {/* Tabs */}
             <View style={[styles.tabRow, { borderBottomColor: theme.colors.border }]}>
                 <TouchableOpacity
@@ -298,7 +297,7 @@ export const SettingsScreen = ({ navigation }: any) => {
             ) : null}
 
             {activeTab === 'org' ? renderOrgTab() : renderThemeTab()}
-        </SafeAreaView>
+        </View>
     );
 };
 
