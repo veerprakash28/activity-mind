@@ -34,14 +34,19 @@ export const GenerateScreen = ({ route }: any) => {
 
     // Auto-generate if pre-selected category is provided (from Dashboard)
     React.useEffect(() => {
-        if (route?.params?.preSelectedCategory && !result && !loading) {
-            handleGenerate();
+        const newCat = route?.params?.preSelectedCategory;
+        if (newCat) {
+            setCategory(newCat);
+            // Clear previous results to show loading state for new category
+            setResult(null);
+            handleGenerate(newCat);
         }
     }, [route?.params?.preSelectedCategory]);
 
-    const handleGenerate = async () => {
+    const handleGenerate = async (overrideCategory?: string) => {
         setLoading(true);
-        const filters: FilterParams = { category, duration, budgetLevel };
+        const finalCategory = overrideCategory || category;
+        const filters: FilterParams = { category: finalCategory, duration, budgetLevel };
 
         try {
             await new Promise(res => setTimeout(res, 600));
