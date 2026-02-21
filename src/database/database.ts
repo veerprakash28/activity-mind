@@ -143,6 +143,16 @@ export const initDb = async () => {
         console.log('Seeding complete.');
     }
 
+    // Cleanup: Normalize all categories to Title Case to prevent duplicates (collision fix)
+    // This handles existing data that might have different casing
+    const allActivities = await db.getAllAsync<{ id: number; category: string }>(`SELECT id, category FROM activities`);
+    for (const activity of allActivities) {
+        const normalized = activity.category.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        if (normalized !== activity.category) {
+            await db.runAsync(`UPDATE activities SET category = ? WHERE id = ?`, [normalized, activity.id]);
+        }
+    }
+
     return true;
 };
 

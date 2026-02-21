@@ -36,10 +36,16 @@ export const AddActivityScreen = ({ navigation }: any) => {
 
         setSaving(true);
         try {
+            const toTitleCase = (str: string) => {
+                return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+            };
+
             const stepsArray = steps.split('\n').filter(s => s.trim());
             const materialsArray = materials.split('\n').filter(m => m.trim());
 
-            const finalCategory = showNewCategoryInput ? newCategoryName.trim() : category;
+            const rawCategory = showNewCategoryInput ? newCategoryName.trim() : category;
+            const finalCategory = toTitleCase(rawCategory);
+
             if (showNewCategoryInput && !newCategoryName.trim()) {
                 Alert.alert("Required", "Please enter a new category name.");
                 setSaving(false);
