@@ -1,32 +1,33 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
-import { getRecentHistory, ActivityHistory, Activity, markCompleted, getDb } from '../database/database';
+import { getDb, ActivityHistory, Activity, markCompleted } from '../database/database';
 import { ActivityCard } from '../components/ActivityCard';
+import { ActivityDetailModal } from '../components/ActivityDetailModal';
 import { Button } from '../components/Button';
 
 export const CalendarScreen = ({ route }: any) => {
     const { theme } = useAppContext();
 
     const todayStr = new Date().toISOString().split('T')[0];
-    const [selectedDate, setSelectedDate] = useState(route.params?.date || todayStr);
+    const [selectedDate, setSelectedDate] = useState(route?.params?.date || todayStr);
     const [history, setHistory] = useState<(ActivityHistory & Activity)[]>([]);
     const [markedDates, setMarkedDates] = useState<any>({});
+    const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+    const [modalVisible, setModalVisible] = useState(false);
 
     const loadHistory = async () => {
         try {
-            // Fetch last 90 days for calendar marking
             const db = await getDb();
             const recent = await db.getAllAsync<ActivityHistory & Activity>(
-                `SELECT h.*, a.* FROM activity_history h JOIN activities a ON h.activity_id = a.id ORDER BY h.scheduled_date DESC`
+                `SELECT h.*, a.name, a.description, a.category, a.duration, a.steps, a.materials, a.estimated_cost, a.difficulty, a.prep_time, a.min_employees, a.max_employees, a.indoor_outdoor, a.remote_compatible, a.is_custom FROM activity_history h JOIN activities a ON h.activity_id = a.id ORDER BY h.scheduled_date DESC`
             );
 
             setHistory(recent);
 
-            // Process for calendar dots
             const marks: any = {};
             recent.forEach(item => {
                 const dateStr = item.scheduled_date.split('T')[0];
@@ -36,7 +37,6 @@ export const CalendarScreen = ({ route }: any) => {
                 };
             });
 
-            // Ensure selected date is styled
             marks[selectedDate] = {
                 ...marks[selectedDate],
                 selected: true,
@@ -52,11 +52,8 @@ export const CalendarScreen = ({ route }: any) => {
 
     useFocusEffect(
         useCallback(() => {
-            if (route.params?.date) {
-                setSelectedDate(route.params.date);
-            }
             loadHistory();
-        }, [route.params?.date, selectedDate])
+        }, [selectedDate])
     );
 
     const handleDayPress = (day: any) => {
@@ -64,15 +61,33 @@ export const CalendarScreen = ({ route }: any) => {
     };
 
     const handleMarkComplete = async (historyId: number) => {
-        // In a real app we'd open a modal to ask for 1-5 rating & feedback
         await markCompleted(historyId, 5, "Great activity!");
         await loadHistory();
+    };
+
+    const handleRemoveScheduled = (item: ActivityHistory & Activity) => {
+        Alert.alert(
+            "Remove Scheduled Activity",
+            `Remove "${item.name}" from ${item.scheduled_date.split('T')[0]}?`,
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Remove",
+                    style: "destructive",
+                    onPress: async () => {
+                        const db = await getDb();
+                        await db.runAsync(`DELETE FROM activity_history WHERE id = ?`, [item.id]);
+                        await loadHistory();
+                    }
+                }
+            ]
+        );
     };
 
     const selectedActivities = history.filter(h => h.scheduled_date.startsWith(selectedDate));
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
 
                 <View style={[styles.calendarWrap, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
@@ -112,50 +127,53 @@ export const CalendarScreen = ({ route }: any) => {
                     ) : (
                         selectedActivities.map(item => (
                             <View key={item.id} style={styles.activityWrap}>
-                                <ActivityCard activity={item} />
+                                <ActivityCard activity={item as any} onPress={() => { setSelectedActivity(item as any); setModalVisible(true); }} />
                                 {item.completed ? (
                                     <Text style={[theme.typography.caption, { color: theme.colors.success, textAlign: 'center', marginBottom: 16, fontWeight: '700' }]}>
-                                        ✓ Completed
+                                        {"✓ Completed"}
                                     </Text>
                                 ) : (
-                                    <Button
-                                        title="Mark as Completed"
-                                        variant="secondary"
-                                        onPress={() => handleMarkComplete(item.id)}
-                                        style={{ marginTop: -8, marginBottom: 16 }}
-                                    />
+                                    <View style={styles.calendarActions}>
+                                        <Button
+                                            title="Mark Complete"
+                                            variant="secondary"
+                                            onPress={() => handleMarkComplete(item.id)}
+                                            style={{ flex: 1, marginRight: 8 }}
+                                            size="small"
+                                        />
+                                        <TouchableOpacity
+                                            style={[styles.removeBtn, { borderColor: theme.colors.error + '40' }]}
+                                            onPress={() => handleRemoveScheduled(item)}
+                                        >
+                                            <MaterialCommunityIcons name="delete-outline" size={18} color={theme.colors.error} />
+                                        </TouchableOpacity>
+                                    </View>
                                 )}
                             </View>
                         ))
                     )}
                 </View>
             </ScrollView>
-        </SafeAreaView>
+
+            <ActivityDetailModal
+                activity={selectedActivity}
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+            />
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
+    container: { flex: 1 },
+    scrollContent: { padding: 16 },
+    calendarWrap: { borderRadius: 20, borderWidth: 1, overflow: 'hidden', marginBottom: 24, paddingBottom: 8 },
+    agendaSection: { flex: 1 },
+    emptyState: { padding: 32, alignItems: 'center' },
+    activityWrap: { marginBottom: 0 },
+    calendarActions: { flexDirection: 'row', alignItems: 'center', marginTop: -8, marginBottom: 16 },
+    removeBtn: {
+        width: 40, height: 40, borderRadius: 20, borderWidth: 1,
+        alignItems: 'center', justifyContent: 'center',
     },
-    scrollContent: {
-        padding: 16,
-    },
-    calendarWrap: {
-        borderRadius: 20,
-        borderWidth: 1,
-        overflow: 'hidden',
-        marginBottom: 24,
-        paddingBottom: 8,
-    },
-    agendaSection: {
-        flex: 1,
-    },
-    emptyState: {
-        padding: 32,
-        alignItems: 'center',
-    },
-    activityWrap: {
-        marginBottom: 0,
-    }
 });

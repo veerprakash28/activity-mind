@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppProvider, useAppContext } from './src/context/AppContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
@@ -53,8 +54,10 @@ const MainApp = () => {
 
 export default function App() {
   return (
-    <AppProvider>
-      <MainApp />
-    </AppProvider>
+    <SafeAreaProvider>
+      <AppProvider>
+        <MainApp />
+      </AppProvider>
+    </SafeAreaProvider>
   );
 }

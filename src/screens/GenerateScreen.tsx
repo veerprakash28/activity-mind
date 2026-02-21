@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, FlatList } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAppContext } from '../context/AppContext';
 import { Button } from '../components/Button';
 import { FilterChip } from '../components/FilterChip';
 import { ActivityCard } from '../components/ActivityCard';
+import { ActivityDetailModal } from '../components/ActivityDetailModal';
 import { generateActivities, FilterParams, SmartEngineResult } from '../database/smartEngine';
-import { saveHistory, toggleFavorite, isFavorite } from '../database/database';
+import { saveHistory, toggleFavorite, isFavorite, Activity } from '../database/database';
 
 export const GenerateScreen = ({ route }: any) => {
     const { theme, organization } = useAppContext();
@@ -22,23 +23,24 @@ export const GenerateScreen = ({ route }: any) => {
     const [result, setResult] = useState<SmartEngineResult | null>(null);
     const [favoriteMap, setFavoriteMap] = useState<Record<number, boolean>>({});
 
+    // Detail modal
+    const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+    const [modalVisible, setModalVisible] = useState(false);
+
+    // Date picker
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [schedulingActivity, setSchedulingActivity] = useState<Activity | null>(null);
+    const [selectedDate, setSelectedDate] = useState(new Date());
+
     const handleGenerate = async () => {
         setLoading(true);
-
-        const filters: FilterParams = {
-            category,
-            duration,
-            budgetLevel,
-        };
+        const filters: FilterParams = { category, duration, budgetLevel };
 
         try {
-            // Add slight delay to simulate "AI thinking" for UX
             await new Promise(res => setTimeout(res, 600));
-
             const generationResult = await generateActivities(organization, filters, 3);
             setResult(generationResult);
 
-            // Check favorite status for all results
             const favMap: Record<number, boolean> = {};
             for (const act of generationResult.activities) {
                 favMap[act.id] = await isFavorite(act.id);
@@ -51,22 +53,47 @@ export const GenerateScreen = ({ route }: any) => {
         }
     };
 
-    const handleShuffle = () => {
-        handleGenerate(); // Just re-run generation with same filters
-    };
-
     const handleToggleFavorite = async (activityId: number) => {
         const isFav = await toggleFavorite(activityId);
         setFavoriteMap(prev => ({ ...prev, [activityId]: isFav }));
     };
 
-    const handleAddToCalendar = async (activityId: number) => {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(12, 0, 0, 0);
+    const handleSchedulePress = (activity: Activity) => {
+        setSchedulingActivity(activity);
+        setSelectedDate(new Date());
+        setShowDatePicker(true);
+    };
 
-        await saveHistory(activityId, tomorrow.toISOString());
-        Alert.alert("Scheduled!", "Added to your calendar for tomorrow.");
+    const handleDateChange = async (_event: any, date?: Date) => {
+        if (Platform.OS === 'android') {
+            setShowDatePicker(false);
+        }
+        if (date && schedulingActivity) {
+            setSelectedDate(date);
+            if (Platform.OS === 'android') {
+                // On Android, picker dismisses on selection
+                date.setHours(12, 0, 0, 0);
+                await saveHistory(schedulingActivity.id, date.toISOString());
+                Alert.alert("Scheduled!", `Activity added to ${date.toLocaleDateString()}.`);
+                setSchedulingActivity(null);
+            }
+        }
+    };
+
+    const confirmIOSDate = async () => {
+        if (schedulingActivity) {
+            const date = new Date(selectedDate);
+            date.setHours(12, 0, 0, 0);
+            await saveHistory(schedulingActivity.id, date.toISOString());
+            Alert.alert("Scheduled!", `Activity added to ${date.toLocaleDateString()}.`);
+            setShowDatePicker(false);
+            setSchedulingActivity(null);
+        }
+    };
+
+    const openDetail = (activity: Activity) => {
+        setSelectedActivity(activity);
+        setModalVisible(true);
     };
 
     const renderFilters = () => (
@@ -76,46 +103,25 @@ export const GenerateScreen = ({ route }: any) => {
             <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginBottom: theme.spacing.xs }]}>Category</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
                 {['Icebreaker', 'Team Bonding', 'Wellness', 'Training', 'Recognition', 'Festival'].map(cat => (
-                    <FilterChip
-                        key={cat}
-                        label={cat}
-                        selected={category === cat}
-                        onPress={() => setCategory(category === cat ? undefined : cat)}
-                    />
+                    <FilterChip key={cat} label={cat} selected={category === cat} onPress={() => setCategory(category === cat ? undefined : cat)} />
                 ))}
             </ScrollView>
 
             <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginTop: theme.spacing.sm, marginBottom: theme.spacing.xs }]}>Duration</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
                 {['15 min', '30 min', '1 hr', 'Half day'].map(dur => (
-                    <FilterChip
-                        key={dur}
-                        label={dur}
-                        selected={duration === dur}
-                        onPress={() => setDuration(duration === dur ? undefined : dur)}
-                    />
+                    <FilterChip key={dur} label={dur} selected={duration === dur} onPress={() => setDuration(duration === dur ? undefined : dur)} />
                 ))}
             </ScrollView>
 
             <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginTop: theme.spacing.sm, marginBottom: theme.spacing.xs }]}>Budget</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
-                {['Low', 'Medium', 'High'].map(bud => (
-                    <FilterChip
-                        key={bud}
-                        label={bud}
-                        selected={budgetLevel === bud}
-                        // @ts-ignore
-                        onPress={() => setBudgetLevel(budgetLevel === bud ? undefined : bud)}
-                    />
+                {(['Low', 'Medium', 'High'] as const).map(bud => (
+                    <FilterChip key={bud} label={bud} selected={budgetLevel === bud} onPress={() => setBudgetLevel(budgetLevel === bud ? undefined : bud)} />
                 ))}
             </ScrollView>
 
-            <Button
-                title="Generate Now"
-                onPress={handleGenerate}
-                loading={loading}
-                style={{ marginTop: theme.spacing.lg }}
-            />
+            <Button title="Generate Now" onPress={handleGenerate} loading={loading} style={{ marginTop: theme.spacing.lg }} />
         </View>
     );
 
@@ -145,10 +151,10 @@ export const GenerateScreen = ({ route }: any) => {
                     <View key={activity.id} style={styles.resultItem}>
                         <View style={styles.resultBadge}>
                             <Text style={[theme.typography.caption, { color: theme.colors.primary, fontWeight: '700' }]}>
-                                Idea {index + 1}
+                                {"Idea " + (index + 1)}
                             </Text>
                         </View>
-                        <ActivityCard activity={activity} expanded={false} />
+                        <ActivityCard activity={activity} expanded={false} onPress={() => openDetail(activity)} />
                         <View style={styles.actionRow}>
                             <TouchableOpacity
                                 style={[styles.actionBtn, { borderColor: theme.colors.border }]}
@@ -165,7 +171,7 @@ export const GenerateScreen = ({ route }: any) => {
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.actionBtn, { borderColor: theme.colors.border }]}
-                                onPress={() => handleAddToCalendar(activity.id)}
+                                onPress={() => handleSchedulePress(activity)}
                             >
                                 <MaterialCommunityIcons name="calendar-plus" size={20} color={theme.colors.primary} />
                                 <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginLeft: 4 }]}>Schedule</Text>
@@ -178,7 +184,7 @@ export const GenerateScreen = ({ route }: any) => {
                     title="Shuffle / Get New Ideas"
                     variant="outline"
                     icon={<MaterialCommunityIcons name="shuffle-variant" size={20} color={theme.colors.primary} />}
-                    onPress={handleShuffle}
+                    onPress={handleGenerate}
                     loading={loading}
                     style={{ marginTop: theme.spacing.sm }}
                 />
@@ -187,66 +193,71 @@ export const GenerateScreen = ({ route }: any) => {
     };
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 {renderFilters()}
                 {renderResult()}
             </ScrollView>
-        </SafeAreaView>
+
+            {/* Activity Detail Modal */}
+            <ActivityDetailModal
+                activity={selectedActivity}
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+                actions={selectedActivity ? (
+                    <>
+                        <Button
+                            title={favoriteMap[selectedActivity.id] ? "Saved" : "Save"}
+                            variant="outline"
+                            icon={<MaterialCommunityIcons name={favoriteMap[selectedActivity.id] ? "heart" : "heart-outline"} size={18} color={theme.colors.primary} />}
+                            onPress={() => handleToggleFavorite(selectedActivity.id)}
+                            style={{ flex: 1 }}
+                            size="small"
+                        />
+                        <Button
+                            title="Schedule"
+                            icon={<MaterialCommunityIcons name="calendar-plus" size={18} color={theme.colors.white} />}
+                            onPress={() => { setModalVisible(false); handleSchedulePress(selectedActivity); }}
+                            style={{ flex: 1 }}
+                            size="small"
+                        />
+                    </>
+                ) : undefined}
+            />
+
+            {/* Date Picker */}
+            {showDatePicker && (
+                <View>
+                    <DateTimePicker
+                        value={selectedDate}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        minimumDate={new Date()}
+                        onChange={handleDateChange}
+                    />
+                    {Platform.OS === 'ios' && (
+                        <View style={styles.iosDateActions}>
+                            <Button title="Cancel" variant="ghost" onPress={() => setShowDatePicker(false)} size="small" />
+                            <Button title="Confirm" onPress={confirmIOSDate} size="small" />
+                        </View>
+                    )}
+                </View>
+            )}
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    scrollContent: {
-        padding: 16,
-        paddingBottom: 40,
-    },
-    filterSection: {
-        padding: 20,
-        borderRadius: 20,
-        borderWidth: 1,
-        marginBottom: 24,
-    },
-    chipRow: {
-        flexDirection: 'row',
-    },
-    resultContainer: {
-        marginTop: 8,
-    },
-    aiMessage: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        borderRadius: 12,
-        marginBottom: 16,
-    },
-    resultItem: {
-        marginBottom: 16,
-    },
-    resultBadge: {
-        marginBottom: 6,
-    },
-    actionRow: {
-        flexDirection: 'row',
-        marginTop: 8,
-        gap: 8,
-    },
-    actionBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 20,
-        borderWidth: 1,
-    },
-    emptyState: {
-        padding: 32,
-        borderRadius: 20,
-        borderWidth: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    }
+    container: { flex: 1 },
+    scrollContent: { padding: 16, paddingBottom: 40 },
+    filterSection: { padding: 20, borderRadius: 20, borderWidth: 1, marginBottom: 24 },
+    chipRow: { flexDirection: 'row' },
+    resultContainer: { marginTop: 8 },
+    aiMessage: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, marginBottom: 16 },
+    resultItem: { marginBottom: 16 },
+    resultBadge: { marginBottom: 6 },
+    actionRow: { flexDirection: 'row', marginTop: 8, gap: 8 },
+    actionBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
+    emptyState: { padding: 32, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+    iosDateActions: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 10 },
 });

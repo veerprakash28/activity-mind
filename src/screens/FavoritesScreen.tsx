@@ -1,17 +1,19 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
 import { ActivityCard } from '../components/ActivityCard';
-import { getFavorites, Favorite, Activity } from '../database/database';
+import { ActivityDetailModal } from '../components/ActivityDetailModal';
+import { getFavorites, toggleFavorite, Favorite, Activity } from '../database/database';
+import { Button } from '../components/Button';
 
 export const FavoritesScreen = () => {
     const { theme } = useAppContext();
     const [favorites, setFavorites] = useState<(Favorite & Activity)[]>([]);
     const [refreshing, setRefreshing] = useState(false);
-    const [expandedId, setExpandedId] = useState<number | null>(null);
+    const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+    const [modalVisible, setModalVisible] = useState(false);
 
     const loadFavorites = async () => {
         try {
@@ -34,6 +36,11 @@ export const FavoritesScreen = () => {
         setRefreshing(false);
     };
 
+    const handleRemoveFavorite = async (activityId: number) => {
+        await toggleFavorite(activityId);
+        loadFavorites();
+    };
+
     const renderEmpty = () => (
         <View style={styles.emptyContainer}>
             <MaterialCommunityIcons name="heart-broken" size={64} color={theme.colors.border} />
@@ -45,7 +52,7 @@ export const FavoritesScreen = () => {
     );
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             <FlatList
                 data={favorites}
                 keyExtractor={(item) => item.id.toString()}
@@ -55,27 +62,33 @@ export const FavoritesScreen = () => {
                 renderItem={({ item }) => (
                     <ActivityCard
                         activity={item}
-                        expanded={expandedId === item.id}
-                        onPress={() => setExpandedId(expandedId === item.id ? null : item.id)}
+                        expanded={false}
+                        onPress={() => { setSelectedActivity(item); setModalVisible(true); }}
                     />
                 )}
             />
-        </SafeAreaView>
+
+            <ActivityDetailModal
+                activity={selectedActivity}
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+                actions={selectedActivity ? (
+                    <Button
+                        title="Remove from Favorites"
+                        variant="outline"
+                        icon={<MaterialCommunityIcons name="heart-off" size={18} color={theme.colors.primary} />}
+                        onPress={() => { handleRemoveFavorite(selectedActivity.id); setModalVisible(false); }}
+                        style={{ flex: 1 }}
+                        size="small"
+                    />
+                ) : undefined}
+            />
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    listContent: {
-        padding: 16,
-        flexGrow: 1,
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 40,
-    }
+    container: { flex: 1 },
+    listContent: { padding: 16, flexGrow: 1 },
+    emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
 });

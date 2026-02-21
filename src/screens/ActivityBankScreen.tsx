@@ -1,18 +1,20 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
 import { getAllActivities, deleteActivity, Activity } from '../database/database';
 import { ActivityCard } from '../components/ActivityCard';
+import { ActivityDetailModal } from '../components/ActivityDetailModal';
 import { FilterChip } from '../components/FilterChip';
 
 export const ActivityBankScreen = ({ navigation }: any) => {
     const { theme } = useAppContext();
     const [activities, setActivities] = useState<Activity[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
+    const [activeTab, setActiveTab] = useState<'built-in' | 'custom'>('built-in');
+    const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+    const [modalVisible, setModalVisible] = useState(false);
 
     const loadActivities = async () => {
         try {
@@ -47,19 +49,17 @@ export const ActivityBankScreen = ({ navigation }: any) => {
         );
     };
 
-    const categories = ['Icebreaker', 'Team Bonding', 'Wellness', 'Training', 'Recognition', 'Festival'];
+    const builtInActivities = activities.filter(a => a.is_custom === 0);
+    const customActivities = activities.filter(a => a.is_custom === 1);
+    const currentList = activeTab === 'built-in' ? builtInActivities : customActivities;
 
-    const filteredActivities = activities.filter(a => {
-        const matchesSearch = !searchQuery || a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.description.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCategory = !selectedCategory || a.category === selectedCategory;
-        return matchesSearch && matchesCategory;
+    const filteredActivities = currentList.filter(a => {
+        if (!searchQuery) return true;
+        return a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.description.toLowerCase().includes(searchQuery.toLowerCase());
     });
 
-    const customCount = activities.filter(a => a.is_custom === 1).length;
-    const builtInCount = activities.filter(a => a.is_custom === 0).length;
-
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             {/* Search */}
             <View style={[styles.searchContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                 <MaterialCommunityIcons name="magnify" size={20} color={theme.colors.iconDefault} />
@@ -77,28 +77,26 @@ export const ActivityBankScreen = ({ navigation }: any) => {
                 ) : null}
             </View>
 
-            {/* Category Filter */}
-            <FlatList
-                horizontal
-                data={categories}
-                keyExtractor={item => item}
-                showsHorizontalScrollIndicator={false}
-                style={styles.categoryRow}
-                contentContainerStyle={{ paddingHorizontal: 16 }}
-                renderItem={({ item }) => (
-                    <FilterChip
-                        label={item}
-                        selected={selectedCategory === item}
-                        onPress={() => setSelectedCategory(selectedCategory === item ? undefined : item)}
-                    />
-                )}
-            />
-
-            {/* Stats */}
-            <View style={[styles.statsBar, { borderBottomColor: theme.colors.border }]}>
-                <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
-                    {filteredActivities.length} activities · {builtInCount} built-in · {customCount} custom
-                </Text>
+            {/* Tabs */}
+            <View style={[styles.tabRow, { borderBottomColor: theme.colors.border }]}>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'built-in' && { borderBottomColor: theme.colors.primary, borderBottomWidth: 2 }]}
+                    onPress={() => setActiveTab('built-in')}
+                >
+                    <MaterialCommunityIcons name="book-open-variant" size={18} color={activeTab === 'built-in' ? theme.colors.primary : theme.colors.textSecondary} />
+                    <Text style={[theme.typography.body2, { color: activeTab === 'built-in' ? theme.colors.primary : theme.colors.textSecondary, marginLeft: 6, fontWeight: activeTab === 'built-in' ? '600' : '400' }]}>
+                        {"Built-in (" + builtInActivities.length + ")"}
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'custom' && { borderBottomColor: theme.colors.primary, borderBottomWidth: 2 }]}
+                    onPress={() => setActiveTab('custom')}
+                >
+                    <MaterialCommunityIcons name="account-edit" size={18} color={activeTab === 'custom' ? theme.colors.primary : theme.colors.textSecondary} />
+                    <Text style={[theme.typography.body2, { color: activeTab === 'custom' ? theme.colors.primary : theme.colors.textSecondary, marginLeft: 6, fontWeight: activeTab === 'custom' ? '600' : '400' }]}>
+                        {"Custom (" + customActivities.length + ")"}
+                    </Text>
+                </TouchableOpacity>
             </View>
 
             {/* Activity List */}
@@ -108,119 +106,73 @@ export const ActivityBankScreen = ({ navigation }: any) => {
                 contentContainerStyle={styles.listContent}
                 renderItem={({ item }) => (
                     <View style={styles.cardWrapper}>
-                        <ActivityCard activity={item} expanded={false} />
-                        <View style={styles.cardActions}>
-                            {item.is_custom === 1 && (
-                                <TouchableOpacity
-                                    style={[styles.deleteBtn, { borderColor: theme.colors.error + '40' }]}
-                                    onPress={() => handleDelete(item)}
-                                >
-                                    <MaterialCommunityIcons name="delete-outline" size={18} color={theme.colors.error} />
-                                    <Text style={[theme.typography.caption, { color: theme.colors.error, marginLeft: 4 }]}>Delete</Text>
-                                </TouchableOpacity>
-                            )}
-                            <View style={[styles.badge, { backgroundColor: item.is_custom ? theme.colors.secondaryLight : theme.colors.primaryLight }]}>
-                                <Text style={[theme.typography.caption, { color: item.is_custom ? theme.colors.secondary : theme.colors.primary, fontWeight: '600' }]}>
-                                    {item.is_custom ? 'Custom' : 'Built-in'}
-                                </Text>
-                            </View>
-                        </View>
+                        <ActivityCard activity={item} expanded={false} onPress={() => { setSelectedActivity(item); setModalVisible(true); }} />
+                        {activeTab === 'custom' && (
+                            <TouchableOpacity
+                                style={[styles.deleteBtn, { borderColor: theme.colors.error + '40' }]}
+                                onPress={() => handleDelete(item)}
+                            >
+                                <MaterialCommunityIcons name="delete-outline" size={18} color={theme.colors.error} />
+                                <Text style={[theme.typography.caption, { color: theme.colors.error, marginLeft: 4 }]}>Delete</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 )}
                 ListEmptyComponent={
                     <View style={styles.emptyState}>
-                        <MaterialCommunityIcons name="magnify-close" size={48} color={theme.colors.iconDefault} />
+                        <MaterialCommunityIcons name={activeTab === 'custom' ? 'plus-circle-outline' : 'magnify-close'} size={48} color={theme.colors.iconDefault} />
                         <Text style={[theme.typography.body1, { color: theme.colors.textSecondary, marginTop: 12, textAlign: 'center' }]}>
-                            No activities match your search.
+                            {activeTab === 'custom' ? 'No custom activities yet. Tap + to add one!' : 'No activities match your search.'}
                         </Text>
                     </View>
                 }
             />
 
-            {/* Floating Add Button */}
-            <TouchableOpacity
-                style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-                onPress={() => navigation.navigate('AddActivity')}
-                activeOpacity={0.8}
-            >
-                <MaterialCommunityIcons name="plus" size={28} color={theme.colors.white} />
-            </TouchableOpacity>
-        </SafeAreaView>
+            {/* Floating Add Button (show on Custom tab) */}
+            {activeTab === 'custom' ? (
+                <TouchableOpacity
+                    style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+                    onPress={() => navigation.navigate('AddActivity')}
+                    activeOpacity={0.8}
+                >
+                    <MaterialCommunityIcons name="plus" size={28} color={theme.colors.white} />
+                </TouchableOpacity>
+            ) : null}
+
+            {/* Detail Modal */}
+            <ActivityDetailModal
+                activity={selectedActivity}
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+            />
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
+    container: { flex: 1 },
     searchContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginHorizontal: 16,
-        marginTop: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        borderRadius: 12,
-        borderWidth: 1,
+        flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginTop: 12,
+        paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1,
     },
-    searchInput: {
-        flex: 1,
-        marginLeft: 8,
-        fontSize: 15,
+    searchInput: { flex: 1, marginLeft: 8, fontSize: 15 },
+    tabRow: {
+        flexDirection: 'row', borderBottomWidth: 1, marginTop: 8,
     },
-    categoryRow: {
-        marginTop: 12,
-        minHeight: 48,
+    tab: {
+        flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        paddingVertical: 12, paddingBottom: 10,
     },
-    statsBar: {
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderBottomWidth: 1,
-    },
-    listContent: {
-        padding: 16,
-        paddingBottom: 40,
-    },
-    cardWrapper: {
-        marginBottom: 16,
-    },
-    cardActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        marginTop: 6,
-        gap: 8,
-    },
+    listContent: { padding: 16, paddingBottom: 80 },
+    cardWrapper: { marginBottom: 16 },
     deleteBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
-        borderWidth: 1,
+        flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end',
+        paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, marginTop: 6,
     },
-    badge: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    emptyState: {
-        alignItems: 'center',
-        paddingTop: 60,
-    },
+    emptyState: { alignItems: 'center', paddingTop: 60 },
     fab: {
-        position: 'absolute',
-        bottom: 20,
-        right: 20,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        alignItems: 'center',
-        justifyContent: 'center',
-        elevation: 6,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.27,
-        shadowRadius: 4.65,
-    }
+        position: 'absolute', bottom: 20, right: 20, width: 56, height: 56, borderRadius: 28,
+        alignItems: 'center', justifyContent: 'center', elevation: 6,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.27, shadowRadius: 4.65,
+    },
 });

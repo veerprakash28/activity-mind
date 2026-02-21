@@ -26,7 +26,7 @@ export const FilterChip = ({ label, selected, onPress, icon }: FilterChipProps) 
                 }
             ]}
         >
-            {icon && (
+            {icon ? (
                 <MaterialCommunityIcons
                     // @ts-ignore
                     name={icon}
@@ -34,7 +34,7 @@ export const FilterChip = ({ label, selected, onPress, icon }: FilterChipProps) 
                     color={selected ? theme.colors.white : theme.colors.textSecondary}
                     style={{ marginRight: 6 }}
                 />
-            )}
+            ) : null}
             <Text
                 style={[
                     theme.typography.body2,
