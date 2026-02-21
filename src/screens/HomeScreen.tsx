@@ -102,7 +102,7 @@ export const HomeScreen = () => {
                     <View style={styles.ctaTextContainer}>
                         <Text style={[theme.typography.h2, { color: theme.colors.text }]}>Find the perfect activity</Text>
                         <Text style={[theme.typography.body2, { color: theme.colors.textSecondary, marginTop: theme.spacing.xs, marginBottom: theme.spacing.md }]}>
-                            AI-powered recommendations based on your unique team profile
+                            Recommendations based on your unique team profile
                         </Text>
                     </View>
                     <Button

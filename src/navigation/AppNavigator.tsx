@@ -84,11 +84,20 @@ const TabNavigator = () => {
                 name="Generate"
                 // @ts-ignore
                 component={GenerateScreen}
-                options={{
+                options={({ navigation }: any) => ({
                     tabBarIcon: ({ color, size }: { color: string; size: number }) => (
                         <MaterialCommunityIcons name="creation" size={size + 4} color={color} />
                     ),
-                }}
+                    headerRight: () => (
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Generate', { openSettings: true })}
+                            style={{ marginRight: 16 }}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                            <MaterialCommunityIcons name="cog-outline" size={24} color={theme.colors.iconDefault} />
+                        </TouchableOpacity>
+                    ),
+                })}
             />
             <Tab.Screen
                 name="Bank"

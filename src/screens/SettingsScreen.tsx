@@ -40,7 +40,6 @@ export const SettingsScreen = ({ navigation }: any) => {
     const [selectedSecondary, setSelectedSecondary] = useState(customColors.secondary || '#7C3AED');
     const [primaryHex, setPrimaryHex] = useState(customColors.primary || '#2563EB');
     const [secondaryHex, setSecondaryHex] = useState(customColors.secondary || '#7C3AED');
-    const [genCountPref, setGenCountPref] = useState(preferences.generationCount || 3);
     const [monthlyTargetPref, setMonthlyTargetPref] = useState(preferences.monthlyTarget || 2);
 
     const [saving, setSaving] = useState(false);
@@ -55,8 +54,8 @@ export const SettingsScreen = ({ navigation }: any) => {
             industry !== (organization.industry || '') ||
             monthlyTargetPref !== preferences.monthlyTarget
         );
-        return baseChanges || genCountPref !== preferences.generationCount;
-    }, [companyName, employeeCount, workType, budgetRange, industry, organization, genCountPref, preferences.generationCount, monthlyTargetPref, preferences.monthlyTarget]);
+        return baseChanges;
+    }, [companyName, employeeCount, workType, budgetRange, industry, organization, monthlyTargetPref, preferences.monthlyTarget]);
 
     const hasThemeChanges = useMemo(() => {
         return (
@@ -107,7 +106,6 @@ export const SettingsScreen = ({ navigation }: any) => {
                     budgetRange,
                     industry: industry.trim(),
                 }),
-                setGenerationCount(genCountPref),
                 setMonthlyTarget(monthlyTargetPref)
             ]);
             Alert.alert("Saved!", "Organization profile and preferences updated.");
@@ -221,18 +219,6 @@ export const SettingsScreen = ({ navigation }: any) => {
                             label={num + " / mo"}
                             selected={monthlyTargetPref === num}
                             onPress={() => setMonthlyTargetPref(num)}
-                        />
-                    ))}
-                </View>
-
-                <Text style={[theme.typography.h4, { color: theme.colors.text, marginTop: 24 }]}>Ideas per Generation</Text>
-                <View style={[styles.chipRow, { marginTop: 10 }]}>
-                    {[1, 2, 3, 4, 5, 6].map(num => (
-                        <FilterChip
-                            key={num}
-                            label={num.toString()}
-                            selected={genCountPref === num}
-                            onPress={() => setGenCountPref(num)}
                         />
                     ))}
                 </View>
