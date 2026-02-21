@@ -11,7 +11,7 @@ import { ActivityDetailModal } from '../components/ActivityDetailModal';
 import { getActivityStats, getUpcomingActivity, Activity, ActivityHistory, getDb } from '../database/database';
 
 export const HomeScreen = () => {
-    const { theme, organization, categories: dynamicCategories } = useAppContext();
+    const { theme, organization, preferences, categories: dynamicCategories } = useAppContext();
     const navigation = useNavigation();
 
     const [refreshing, setRefreshing] = useState(false);
@@ -72,7 +72,7 @@ export const HomeScreen = () => {
         navigation.navigate('Generate', { preSelectedCategory: category });
     };
 
-    const targetActivities = 2;
+    const targetActivities = preferences.monthlyTarget || 2;
     const engagementScore = Math.min(Math.round((stats.completedThisMonth / targetActivities) * 100), 100);
 
     return (

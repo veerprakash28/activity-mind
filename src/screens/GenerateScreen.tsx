@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAppContext } from '../context/AppContext';
@@ -64,6 +64,13 @@ export const GenerateScreen = ({ route }: any) => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const clearFilters = () => {
+        setCategory(undefined);
+        setDuration(undefined);
+        setBudgetLevel(undefined);
+        setResult(null);
     };
 
     const handleToggleFavorite = async (activityId: number) => {
@@ -271,6 +278,20 @@ const styles = StyleSheet.create({
     chipRow: { flexDirection: 'row' },
     resultContainer: { marginTop: 8 },
     aiMessage: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, marginBottom: 16 },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    clearButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+        borderWidth: 1,
+    },
     resultItem: { marginBottom: 16 },
     resultBadge: { marginBottom: 6 },
     actionRow: { flexDirection: 'row', marginTop: 8, gap: 8 },

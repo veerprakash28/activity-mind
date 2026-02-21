@@ -16,6 +16,7 @@ interface Preferences {
     theme: ThemeType | 'system';
     isPro: boolean;
     generationCount: number;
+    monthlyTarget: number;
 }
 
 interface AppContextData {
@@ -25,6 +26,7 @@ interface AppContextData {
     preferences: Preferences;
     setThemePreference: (mode: ThemeType | 'system') => void;
     setGenerationCount: (count: number) => Promise<void>;
+    setMonthlyTarget: (target: number) => Promise<void>;
 
     // Custom Colors
     customColors: CustomColors;
@@ -55,7 +57,12 @@ const CUSTOM_COLORS_KEY = '@ActivityMind_CustomColors';
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
     const systemColorScheme = useColorScheme() as ThemeType;
-    const [preferences, setPreferences] = useState<Preferences>({ theme: 'system', isPro: false, generationCount: 3 });
+    const [preferences, setPreferences] = useState<Preferences>({
+        theme: 'system',
+        isPro: false,
+        generationCount: 3,
+        monthlyTarget: 2
+    });
     const [organization, setOrganizationState] = useState<Organization | null>(null);
     const [isFirstLaunch, setIsFirstLaunchState] = useState<boolean>(true);
     const [customColors, setCustomColorsState] = useState<CustomColors>({});
@@ -99,6 +106,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     const setGenerationCount = async (count: number) => {
         const newPrefs = { ...preferences, generationCount: count };
+        setPreferences(newPrefs);
+        await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(newPrefs));
+    };
+
+    const setMonthlyTarget = async (target: number) => {
+        const newPrefs = { ...preferences, monthlyTarget: target };
         setPreferences(newPrefs);
         await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(newPrefs));
     };
@@ -156,7 +169,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 unlockPro,
                 categories,
                 refreshCategories,
-                setGenerationCount
+                setGenerationCount,
+                setMonthlyTarget
             }}
         >
             {children}

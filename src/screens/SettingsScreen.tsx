@@ -23,7 +23,7 @@ const COLOR_PRESETS = [
 const isValidHex = (hex: string) => /^#([0-9A-Fa-f]{6})$/.test(hex);
 
 export const SettingsScreen = ({ navigation }: any) => {
-    const { theme, preferences, setThemePreference, setGenerationCount, organization, setOrganization, customColors, setCustomColors } = useAppContext();
+    const { theme, preferences, setThemePreference, setGenerationCount, setMonthlyTarget, organization, setOrganization, customColors, setCustomColors } = useAppContext();
 
     const [activeTab, setActiveTab] = useState<'org' | 'theme'>('org');
 
@@ -41,6 +41,7 @@ export const SettingsScreen = ({ navigation }: any) => {
     const [primaryHex, setPrimaryHex] = useState(customColors.primary || '#2563EB');
     const [secondaryHex, setSecondaryHex] = useState(customColors.secondary || '#7C3AED');
     const [genCountPref, setGenCountPref] = useState(preferences.generationCount || 3);
+    const [monthlyTargetPref, setMonthlyTargetPref] = useState(preferences.monthlyTarget || 2);
 
     const [saving, setSaving] = useState(false);
 
@@ -51,10 +52,11 @@ export const SettingsScreen = ({ navigation }: any) => {
             employeeCount !== (organization.employeeCount?.toString() || '') ||
             workType !== (organization.workType || 'Hybrid') ||
             budgetRange !== (organization.budgetRange || 'Medium') ||
-            industry !== (organization.industry || '')
+            industry !== (organization.industry || '') ||
+            monthlyTargetPref !== preferences.monthlyTarget
         );
         return baseChanges || genCountPref !== preferences.generationCount;
-    }, [companyName, employeeCount, workType, budgetRange, industry, organization, genCountPref, preferences.generationCount]);
+    }, [companyName, employeeCount, workType, budgetRange, industry, organization, genCountPref, preferences.generationCount, monthlyTargetPref, preferences.monthlyTarget]);
 
     const hasThemeChanges = useMemo(() => {
         return (
@@ -105,7 +107,8 @@ export const SettingsScreen = ({ navigation }: any) => {
                     budgetRange,
                     industry: industry.trim(),
                 }),
-                setGenerationCount(genCountPref)
+                setGenerationCount(genCountPref),
+                setMonthlyTarget(monthlyTargetPref)
             ]);
             Alert.alert("Saved!", "Organization profile and preferences updated.");
         } catch (e) {
@@ -207,10 +210,22 @@ export const SettingsScreen = ({ navigation }: any) => {
             <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
                 <Text style={[theme.typography.h4, { color: theme.colors.text }]}>AI Preferences</Text>
                 <Text style={[theme.typography.body2, { color: theme.colors.textSecondary, marginTop: 4 }]}>
-                    Customize how activity ideas are generated
+                    Customize goals and activity suggestions
                 </Text>
 
-                <Text style={[theme.typography.h4, { color: theme.colors.text, marginTop: 20 }]}>Ideas per Generation</Text>
+                <Text style={[theme.typography.h4, { color: theme.colors.text, marginTop: 20 }]}>Monthly Activity Goal</Text>
+                <View style={[styles.chipRow, { marginTop: 10 }]}>
+                    {[1, 2, 3, 4, 8, 12].map(num => (
+                        <FilterChip
+                            key={num}
+                            label={num + " / mo"}
+                            selected={monthlyTargetPref === num}
+                            onPress={() => setMonthlyTargetPref(num)}
+                        />
+                    ))}
+                </View>
+
+                <Text style={[theme.typography.h4, { color: theme.colors.text, marginTop: 24 }]}>Ideas per Generation</Text>
                 <View style={[styles.chipRow, { marginTop: 10 }]}>
                     {[1, 2, 3, 4, 5, 6].map(num => (
                         <FilterChip
