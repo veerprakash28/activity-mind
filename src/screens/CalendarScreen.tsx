@@ -4,7 +4,7 @@ import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
-import { getDb, ActivityHistory, Activity, markCompleted } from '../database/database';
+import { getDb, ActivityHistory, Activity, markCompleted, unmarkCompleted } from '../database/database';
 import { ActivityCard } from '../components/ActivityCard';
 import { ActivityDetailModal } from '../components/ActivityDetailModal';
 import { Button } from '../components/Button';
@@ -60,9 +60,39 @@ export const CalendarScreen = ({ route }: any) => {
         setSelectedDate(day.dateString);
     };
 
-    const handleMarkComplete = async (historyId: number) => {
-        await markCompleted(historyId, 5, "Great activity!");
-        await loadHistory();
+    const handleMarkComplete = async (item: ActivityHistory & Activity) => {
+        Alert.alert(
+            "Mark as Completed",
+            `Did you finish "${item.name}"? This will boost your engagement score!`,
+            [
+                { text: "Not yet", style: "cancel" },
+                {
+                    text: "Yes, Completed!",
+                    onPress: async () => {
+                        await markCompleted(item.id, 5, "Great activity!");
+                        await loadHistory();
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleUnmarkComplete = async (item: ActivityHistory & Activity) => {
+        Alert.alert(
+            "Undo Completion",
+            `Are you sure you want to mark "${item.name}" as not completed?`,
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Yes, Undo",
+                    style: "destructive",
+                    onPress: async () => {
+                        await unmarkCompleted(item.id);
+                        await loadHistory();
+                    }
+                }
+            ]
+        );
     };
 
     const handleRemoveScheduled = (item: ActivityHistory & Activity) => {
@@ -130,14 +160,21 @@ export const CalendarScreen = ({ route }: any) => {
                             <View key={item.id} style={styles.activityWrap}>
                                 <ActivityCard activity={item as any} onPress={() => { setSelectedActivity(item as any); setModalVisible(true); }} />
                                 {item.completed ? (
-                                    <Text style={[theme.typography.caption, { color: theme.colors.success, textAlign: 'center', marginBottom: 16, fontWeight: '700' }]}>
-                                        {"✓ Completed"}
-                                    </Text>
+                                    <View style={styles.calendarActions}>
+                                        <TouchableOpacity
+                                            style={[styles.completeBtn, { backgroundColor: theme.colors.success + '20', borderColor: theme.colors.success }]}
+                                            onPress={() => handleUnmarkComplete(item)}
+                                            activeOpacity={0.8}
+                                        >
+                                            <MaterialCommunityIcons name="check-circle" size={18} color={theme.colors.success} />
+                                            <Text style={[theme.typography.caption, { color: theme.colors.success, marginLeft: 6, fontWeight: '700' }]}>Completed (Undo)</Text>
+                                        </TouchableOpacity>
+                                    </View>
                                 ) : (
                                     <View style={styles.calendarActions}>
                                         <TouchableOpacity
                                             style={[styles.completeBtn, { backgroundColor: theme.colors.secondary }]}
-                                            onPress={() => handleMarkComplete(item.id)}
+                                            onPress={() => handleMarkComplete(item)}
                                             activeOpacity={0.8}
                                         >
                                             <MaterialCommunityIcons name="check-circle-outline" size={18} color={theme.colors.white} />

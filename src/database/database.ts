@@ -213,6 +213,14 @@ export const markCompleted = async (historyId: number, rating: number, feedback:
     );
 };
 
+export const unmarkCompleted = async (historyId: number) => {
+    const db = await getDb();
+    await db.runAsync(
+        `UPDATE activity_history SET completed = 0, rating = NULL, feedback = NULL WHERE id = ?`,
+        [historyId]
+    );
+};
+
 export const toggleFavorite = async (activityId: number) => {
     const db = await getDb();
     const existing = await db.getFirstAsync(`SELECT id FROM favorites WHERE activity_id = ?`, [activityId]);
