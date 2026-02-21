@@ -4,10 +4,10 @@ An AI-powered HR activity generator built with React Native and Expo. Helps HR t
 
 ## Features
 
-- **Smart Activity Generator** – Get 3 curated activity ideas based on filters (category, duration, budget). Shuffle for new suggestions.
+- **Smart Activity Generator** – Get up to 6 curated activity ideas based on filters. Includes a dedicated **Settings Modal** for preferences and **Pull-to-Reset** for a clean slate.
 - **Activity Bank** – Browse 30+ built-in activities split into **Built-in** and **Custom** tabs with counts.
 - **Custom Activities** – Add your own activities with full details (steps, materials, budget, duration, prep time, etc.).
-- **Calendar & Scheduling** – Schedule activities and track completion on a visual calendar. Remove items with one tap.
+- **Calendar & Scheduling** – Schedule activities and track completion on a visual calendar. Includes **Confirmation Alerts** and **Undo Completion** for safety.
 - **Insights Dashboard** – View engagement trends, category breakdowns, and AI-powered suggestions based on your real activity history.
 - **Custom Branding** – Choose your organization's primary and secondary colors using a **Hex color picker** or 12 preset swatches. Includes live preview.
 - **Tabbed Settings** – Organized settings for both Organization Profile and Theme Customization with **unsaved changes indicators**.
@@ -60,6 +60,14 @@ cd android && ./gradlew assembleRelease
 ```
 
 **Output location:** `android/app/build/outputs/apk/release/app-release.apk`
+
+### Automated Releases (CI/CD)
+
+The project includes a **GitHub Actions** workflow for automated builds.
+
+- **Trigger a Release**: Push a tag starting with `v` (e.g., `git tag v1.0.0 && git push origin v1.0.0`).
+- **Manual Build**: Go to the **Actions** tab on GitHub, select "Build and Release Android APK", and click "Run workflow".
+- **Result**: A new GitHub Release is created automatically with the APK attached.
 
 
 ## Project Structure
