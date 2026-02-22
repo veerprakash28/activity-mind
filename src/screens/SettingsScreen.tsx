@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, Alert, TouchableOpacity, Switch, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
 import { Button } from '../components/Button';
@@ -28,7 +28,7 @@ const COLOR_PRESETS = [
 const isValidHex = (hex: string) => /^#([0-9A-Fa-f]{6})$/.test(hex);
 
 export const SettingsScreen = ({ navigation }: any) => {
-    const { theme, preferences, setThemePreference, setGenerationCount, setMonthlyTarget, organization, setOrganization, customColors, setCustomColors, categories, renameCategory, updateInfo, checkUpdate } = useAppContext();
+    const { theme, preferences, setThemePreference, setGenerationCount, setMonthlyTarget, setRemindersEnabled, organization, setOrganization, customColors, setCustomColors, categories, renameCategory, updateInfo, checkUpdate } = useAppContext();
 
     const [activeTab, setActiveTab] = useState<'org' | 'theme'>('org');
 
@@ -313,30 +313,23 @@ export const SettingsScreen = ({ navigation }: any) => {
             </View>
 
             <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
-                <Text style={[theme.typography.h4, { color: theme.colors.text }]}>Smart Reminders</Text>
-                <Text style={[theme.typography.body2, { color: theme.colors.textSecondary, marginTop: 4, marginBottom: 12 }]}>
-                    Get notified 30 minutes before your scheduled team activities.
-                </Text>
-                <Button
-                    title="Send Test Notification"
-                    variant="outline"
-                    icon={<MaterialCommunityIcons name="bell-ring-outline" size={18} color={theme.colors.primary} />}
-                    onPress={async () => {
-                        const success = await NotificationService.sendImmediateTestNotification();
-                        if (success) {
-                            setStatusType('success');
-                            setStatusTitle('Sent!');
-                            setStatusMessage('Check your notifications! If you didn\'t receive it, please check your app permissions.');
-                            setStatusVisible(true);
-                        } else {
-                            setStatusType('error');
-                            setStatusTitle('Failed');
-                            setStatusMessage('Could not send test notification. Please check app permissions in settings.');
-                            setStatusVisible(true);
-                        }
-                    }}
-                    size="small"
-                />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View style={{ flex: 1, marginRight: 16 }}>
+                        <Text style={[theme.typography.h4, { color: theme.colors.text }]}>Smart Reminders</Text>
+                        <Text style={[theme.typography.body2, { color: theme.colors.textSecondary, marginTop: 4 }]}>
+                            Get notified 30 minutes before your scheduled team activities.
+                        </Text>
+                    </View>
+                    <Switch
+                        value={preferences.remindersEnabled}
+                        onValueChange={(val) => {
+                            setRemindersEnabled(val);
+                            NotificationService.setEnabled(val);
+                        }}
+                        trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                        thumbColor={Platform.OS === 'ios' ? undefined : (preferences.remindersEnabled ? '#FFF' : '#f4f3f4')}
+                    />
+                </View>
             </View>
 
             <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: theme.colors.border }}>

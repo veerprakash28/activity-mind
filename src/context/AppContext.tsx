@@ -18,6 +18,7 @@ interface Preferences {
     isPro: boolean;
     generationCount: number;
     monthlyTarget: number;
+    remindersEnabled: boolean;
 }
 
 interface AppContextData {
@@ -28,6 +29,7 @@ interface AppContextData {
     setThemePreference: (mode: ThemeType | 'system') => void;
     setGenerationCount: (count: number) => Promise<void>;
     setMonthlyTarget: (target: number) => Promise<void>;
+    setRemindersEnabled: (enabled: boolean) => Promise<void>;
 
     // Custom Colors
     customColors: CustomColors;
@@ -67,7 +69,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         theme: 'system',
         isPro: false,
         generationCount: 3,
-        monthlyTarget: 2
+        monthlyTarget: 2,
+        remindersEnabled: true
     });
     const [organization, setOrganizationState] = useState<Organization | null>(null);
     const [isFirstLaunch, setIsFirstLaunchState] = useState<boolean>(true);
@@ -119,6 +122,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     const setMonthlyTarget = async (target: number) => {
         const newPrefs = { ...preferences, monthlyTarget: target };
+        setPreferences(newPrefs);
+        await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(newPrefs));
+    };
+
+    const setRemindersEnabled = async (enabled: boolean) => {
+        const newPrefs = { ...preferences, remindersEnabled: enabled };
         setPreferences(newPrefs);
         await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(newPrefs));
     };
@@ -191,6 +200,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 renameCategory,
                 setGenerationCount,
                 setMonthlyTarget,
+                setRemindersEnabled,
                 updateInfo,
                 checkUpdate
             }}

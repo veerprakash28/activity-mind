@@ -2,6 +2,9 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 // Configure notification behavior
+// Internal state to respect user preferences
+let _enabled = true;
+
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
         shouldShowAlert: true,
@@ -13,6 +16,18 @@ Notifications.setNotificationHandler({
 });
 
 export const NotificationService = {
+    /**
+     * Set whether notifications are globally enabled for the app
+     */
+    setEnabled: (enabled: boolean) => {
+        _enabled = enabled;
+    },
+
+    /**
+     * Check if notifications are globally enabled
+     */
+    isEnabled: () => _enabled,
+
     /**
      * Request notification permissions from the user
      */
@@ -34,6 +49,8 @@ export const NotificationService = {
      * @returns The notification ID if scheduled, or null
      */
     scheduleActivityReminder: async (historyId: number, activityName: string, dateString: string) => {
+        if (!_enabled) return null;
+
         const scheduledDate = new Date(dateString);
 
         // Target time is 30 minutes before the scheduled time

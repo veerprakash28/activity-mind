@@ -11,7 +11,7 @@ import { initDb } from './src/database/database';
 import { NotificationService } from './src/utils/NotificationService';
 
 const MainApp = () => {
-  const { theme, themeMode, isFirstLaunch, refreshCategories } = useAppContext();
+  const { theme, themeMode, isFirstLaunch, refreshCategories, preferences } = useAppContext();
   const [dbReady, setDbReady] = useState(false);
 
   useEffect(() => {
@@ -19,6 +19,7 @@ const MainApp = () => {
       try {
         await initDb();
         await refreshCategories(); // Sync categories once tables are created
+        NotificationService.setEnabled(preferences.remindersEnabled); // Setup initial state
         await NotificationService.requestPermissions(); // Request for Smart Reminders
         setDbReady(true);
       } catch (e) {
