@@ -2,19 +2,35 @@ import React from 'react';
 import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
-import { Activity } from '../database/database';
+import { Activity, updateActivityRecurringPattern } from '../database/database';
 
 interface ActivityDetailModalProps {
     activity: Activity | null;
     visible: boolean;
     onClose: () => void;
+    onUpdate?: () => void;
     actions?: React.ReactNode;
 }
 
-export const ActivityDetailModal = ({ activity, visible, onClose, actions }: ActivityDetailModalProps) => {
+export const ActivityDetailModal = ({ activity, visible, onClose, onUpdate, actions }: ActivityDetailModalProps) => {
     const { theme } = useAppContext();
+    const [recurringPattern, setRecurringPattern] = React.useState<string | null>(activity?.recurring_pattern || null);
+
+    React.useEffect(() => {
+        setRecurringPattern(activity?.recurring_pattern || null);
+    }, [activity]);
 
     if (!activity) return null;
+
+    const handleSetRecurring = async (day: number | null) => {
+        const pattern = day !== null ? `weekly-${day}` : null;
+        setRecurringPattern(pattern);
+        await updateActivityRecurringPattern(activity.id, pattern);
+        if (onUpdate) onUpdate();
+    };
+
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const currentDay = recurringPattern?.startsWith('weekly-') ? parseInt(recurringPattern.split('-')[1]) : null;
 
     const getCategoryColor = (category: string) => {
         switch (category) {
@@ -151,6 +167,34 @@ export const ActivityDetailModal = ({ activity, visible, onClose, actions }: Act
                                 ))}
                             </View>
                         )}
+
+                        {/* Recurring Ritual */}
+                        <View style={[styles.section, { paddingBottom: 20 }]}>
+                            <View style={styles.sectionHeader}>
+                                <MaterialCommunityIcons name="repeat" size={20} color={theme.colors.primary} />
+                                <Text style={[theme.typography.h4, { color: theme.colors.text, marginLeft: 8 }]}>Recurring Ritual</Text>
+                            </View>
+                            <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginBottom: 12 }]}>
+                                Make this a weekly event to automatically populate monthly calendars.
+                            </Text>
+                            <View style={styles.daysRow}>
+                                <TouchableOpacity
+                                    onPress={() => handleSetRecurring(null)}
+                                    style={[styles.dayButton, { backgroundColor: currentDay === null ? theme.colors.primary : theme.colors.surface, borderColor: theme.colors.border }]}
+                                >
+                                    <Text style={[styles.dayText, { color: currentDay === null ? '#FFF' : theme.colors.text }]}>None</Text>
+                                </TouchableOpacity>
+                                {daysOfWeek.map((day, idx) => (
+                                    <TouchableOpacity
+                                        key={day}
+                                        onPress={() => handleSetRecurring(idx)}
+                                        style={[styles.dayButton, { backgroundColor: currentDay === idx ? theme.colors.primary : theme.colors.surface, borderColor: theme.colors.border }]}
+                                    >
+                                        <Text style={[styles.dayText, { color: currentDay === idx ? '#FFF' : theme.colors.text }]}>{day.charAt(0)}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
                     </ScrollView>
 
                     {/* Actions */}
@@ -255,5 +299,27 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         borderTopWidth: 1,
         gap: 10,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    daysRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 8,
+    },
+    dayButton: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    dayText: {
+        fontSize: 14,
+        fontWeight: '700',
     },
 });

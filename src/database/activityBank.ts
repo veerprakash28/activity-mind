@@ -1,5 +1,26 @@
 // A curated list of HR and team-building activities
 export const INITIAL_ACTIVITIES = [
+    // =========== SPORTS ===========
+    {
+        name: "Football Thursdays ⚽",
+        description: "High-energy football action! Every Thursday evening, we hit the field for a fun, casual game—no pro skills needed, just good vibes, teamwork, and a great time.",
+        category: "Sports",
+        steps: JSON.stringify([
+            "Gather the team at the local turf or park.",
+            "Divide into two equal teams.",
+            "Play a friendly 45-minute match.",
+            "Cool down and grab a quick drink together."
+        ]),
+        materials: JSON.stringify(["Football", "Proper shoes", "Water"]),
+        estimated_cost: "Low",
+        duration: "1 hr",
+        difficulty: "Medium",
+        prep_time: "None",
+        min_employees: 6,
+        max_employees: 22,
+        indoor_outdoor: "Outdoor",
+        remote_compatible: 0
+    },
     // =========== ICEBREAKERS ===========
     {
         name: "Two Truths and a Lie",

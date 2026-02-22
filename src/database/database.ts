@@ -20,6 +20,7 @@ export interface Activity {
     indoor_outdoor: string;
     remote_compatible: number; // 0 or 1
     is_custom: number; // 0 or 1
+    recurring_pattern: string | null; // e.g., 'weekly-4'
 }
 
 export interface ActivityHistory {
@@ -70,7 +71,8 @@ export const initDb = async () => {
       max_employees INTEGER NOT NULL,
       indoor_outdoor TEXT NOT NULL,
       remote_compatible INTEGER NOT NULL,
-      is_custom INTEGER DEFAULT 0
+      is_custom INTEGER DEFAULT 0,
+      recurring_pattern TEXT
     );
 
     CREATE TABLE IF NOT EXISTS favorites (
@@ -109,22 +111,33 @@ export const initDb = async () => {
             await db.execAsync(`ALTER TABLE activities ADD COLUMN is_custom INTEGER DEFAULT 0;`);
         }
 
-        // Migration: Add notification_id to activity_history
         const historyInfo = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(activity_history)`);
         const hasNotificationId = historyInfo.some(col => col.name === 'notification_id');
         if (!hasNotificationId) {
             console.log("Migration: Adding notification_id column to activity_history table...");
             await db.execAsync(`ALTER TABLE activity_history ADD COLUMN notification_id TEXT;`);
         }
+
+        // Migration: Add recurring_pattern to activities
+        const hasRecurringPattern = tableInfo.some(col => col.name === 'recurring_pattern');
+        if (!hasRecurringPattern) {
+            console.log("Migration: Adding recurring_pattern column to activities table...");
+            await db.execAsync(`ALTER TABLE activities ADD COLUMN recurring_pattern TEXT;`);
+        }
     } catch (e) {
         console.error("Migration failed", e);
     }
 
-    // Check if we need to seed data (seed if empty or bank has grown)
+    // Check if we need to seed data (seed if empty or bank has grown/changed)
     const result = await db.getFirstAsync<{ count: number }>(`SELECT COUNT(*) as count FROM activities WHERE is_custom = 0`);
     const builtInCount = result?.count || 0;
 
-    if (builtInCount < INITIAL_ACTIVITIES.length) {
+    // Also check if any names in INITIAL_ACTIVITIES are missing
+    const existingNamesResult = await db.getAllAsync<{ name: string }>(`SELECT name FROM activities WHERE is_custom = 0`);
+    const existingNameSet = new Set(existingNamesResult.map(e => e.name));
+    const missingAny = INITIAL_ACTIVITIES.some(a => !existingNameSet.has(a.name));
+
+    if (builtInCount < INITIAL_ACTIVITIES.length || missingAny) {
         console.log(`Seeding activities... (${builtInCount} existing, ${INITIAL_ACTIVITIES.length} in bank)`);
 
         if (builtInCount === 0) {
@@ -144,9 +157,6 @@ export const initDb = async () => {
             }
         } else {
             // Existing install with fewer activities — add only new ones
-            const existingNames = await db.getAllAsync<{ name: string }>(`SELECT name FROM activities WHERE is_custom = 0`);
-            const existingNameSet = new Set(existingNames.map(e => e.name));
-
             for (const activity of INITIAL_ACTIVITIES) {
                 if (!existingNameSet.has(activity.name)) {
                     await db.runAsync(
@@ -443,4 +453,74 @@ export const deleteActivity = async (activityId: number) => {
 export const renameCategory = async (oldName: string, newName: string) => {
     const db = await getDb();
     await db.runAsync(`UPDATE activities SET category = ? WHERE category = ?`, [newName, oldName]);
+};
+
+export const getMonthlyScheduledActivities = async (year: number, month: number) => {
+    const db = await getDb();
+
+    const startOfMonth = new Date(year, month, 1);
+    const endOfMonth = new Date(year, month + 1, 0);
+
+    const startStr = normalizeDate(startOfMonth);
+    const endStr = normalizeDate(endOfMonth);
+
+    const historyItems = await db.getAllAsync<ActivityHistory & Activity>(
+        `SELECT h.*, a.*
+         FROM activity_history h 
+         JOIN activities a ON h.activity_id = a.id 
+         WHERE h.scheduled_date BETWEEN ? AND ? 
+         ORDER BY h.scheduled_date ASC`,
+        [startStr, endStr]
+    );
+
+    const recurringActivities = await db.getAllAsync<Activity>(
+        `SELECT * FROM activities WHERE recurring_pattern IS NOT NULL`
+    );
+
+    const result: (ActivityHistory & Activity)[] = [...historyItems];
+
+    for (const activity of recurringActivities) {
+        if (!activity.recurring_pattern) continue;
+
+        if (activity.recurring_pattern.startsWith('weekly-')) {
+            const targetDay = parseInt(activity.recurring_pattern.split('-')[1]);
+
+            let tempDate = new Date(year, month, 1);
+            while (tempDate.getMonth() === month) {
+                if (tempDate.getDay() === targetDay) {
+                    const dateStr = normalizeDate(tempDate);
+
+                    const alreadyScheduled = historyItems.some(h =>
+                        h.activity_id === activity.id &&
+                        h.scheduled_date.split('T')[0] === dateStr.split('T')[0]
+                    );
+
+                    if (!alreadyScheduled) {
+                        const { id: activityId, ...rest } = activity;
+                        result.push({
+                            id: -activityId,
+                            activity_id: activityId,
+                            scheduled_date: dateStr,
+                            completed: 0,
+                            rating: null,
+                            feedback: null,
+                            notification_id: null,
+                            created_at: new Date().toISOString(),
+                            ...rest
+                        } as any);
+                    }
+                }
+                tempDate.setDate(tempDate.getDate() + 1);
+            }
+        }
+    }
+    return result.sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
+};
+
+export const updateActivityRecurringPattern = async (activityId: number, pattern: string | null) => {
+    const db = await getDb();
+    await db.runAsync(
+        'UPDATE activities SET recurring_pattern = ? WHERE id = ?',
+        [pattern, activityId]
+    );
 };

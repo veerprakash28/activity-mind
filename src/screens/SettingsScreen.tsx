@@ -10,6 +10,8 @@ import { UpdateModal } from '../components/UpdateModal';
 import { useFocusEffect } from '@react-navigation/native';
 import { StatusModal, StatusType } from '../components/StatusModal';
 import { NotificationService } from '../utils/NotificationService';
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'react-native';
 
 const COLOR_PRESETS = [
     { label: 'Blue', value: '#2563EB' },
@@ -48,6 +50,7 @@ export const SettingsScreen = ({ navigation }: any) => {
     const [workType, setWorkType] = useState<'Remote' | 'Onsite' | 'Hybrid'>(organization?.workType || 'Hybrid');
     const [budgetRange, setBudgetRange] = useState<'Low' | 'Medium' | 'High'>(organization?.budgetRange || 'Medium');
     const [industry, setIndustry] = useState(organization?.industry || '');
+    const [orgLogoUri, setOrgLogoUri] = useState<string | null>(organization?.orgLogoUri || null);
 
     // Theme fields
     const [themeModePref, setThemeModePref] = useState(preferences.theme);
@@ -83,16 +86,17 @@ export const SettingsScreen = ({ navigation }: any) => {
 
     // Detect unsaved changes
     const hasOrgChanges = useMemo(() => {
-        const baseChanges = !organization ? (companyName.trim() !== '' || employeeCount.trim() !== '' || industry.trim() !== '') : (
+        const baseChanges = !organization ? (companyName.trim() !== '' || employeeCount.trim() !== '' || industry.trim() !== '' || orgLogoUri !== null) : (
             companyName !== (organization.companyName || '') ||
             employeeCount !== (organization.employeeCount?.toString() || '') ||
             workType !== (organization.workType || 'Hybrid') ||
             budgetRange !== (organization.budgetRange || 'Medium') ||
             industry !== (organization.industry || '') ||
+            orgLogoUri !== (organization.orgLogoUri || null) ||
             monthlyTargetPref !== preferences.monthlyTarget
         );
         return baseChanges;
-    }, [companyName, employeeCount, workType, budgetRange, industry, organization, monthlyTargetPref, preferences.monthlyTarget]);
+    }, [companyName, employeeCount, workType, budgetRange, industry, orgLogoUri, organization, monthlyTargetPref, preferences.monthlyTarget]);
 
     const hasThemeChanges = useMemo(() => {
         return (
@@ -170,6 +174,7 @@ export const SettingsScreen = ({ navigation }: any) => {
                     workType,
                     budgetRange,
                     industry: industry.trim(),
+                    orgLogoUri: orgLogoUri || undefined,
                 }),
                 setMonthlyTarget(monthlyTargetPref)
             ]);
@@ -263,14 +268,56 @@ export const SettingsScreen = ({ navigation }: any) => {
 
             {/* Profile Card with Save */}
             <View style={[styles.profileCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-                <View style={[styles.avatarCircle, { backgroundColor: theme.colors.primaryLight }]}>
-                    <MaterialCommunityIcons name="office-building" size={32} color={theme.colors.primary} />
+                <View style={{ position: 'relative' }}>
+                    <TouchableOpacity
+                        onPress={async () => {
+                            const result = await ImagePicker.launchImageLibraryAsync({
+                                mediaTypes: ['images'],
+                                allowsEditing: true,
+                                quality: 1,
+                            });
+                            if (!result.canceled && result.assets[0].uri) {
+                                setOrgLogoUri(result.assets[0].uri);
+                            }
+                        }}
+                        style={[styles.avatarCircle, { backgroundColor: theme.colors.primaryLight, overflow: 'hidden' }]}
+                    >
+                        {orgLogoUri ? (
+                            <Image source={{ uri: orgLogoUri }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+                        ) : (
+                            <MaterialCommunityIcons name="office-building" size={32} color={theme.colors.primary} />
+                        )}
+                    </TouchableOpacity>
+
+                    {orgLogoUri && (
+                        <TouchableOpacity
+                            onPress={() => setOrgLogoUri(null)}
+                            style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                right: -8,
+                                backgroundColor: theme.colors.surface,
+                                borderRadius: 15,
+                                padding: 6,
+                                borderWidth: 1,
+                                borderColor: theme.colors.border,
+                                elevation: 4,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 4,
+                            }}
+                        >
+                            <MaterialCommunityIcons name="trash-can-outline" size={18} color={theme.colors.error} />
+                        </TouchableOpacity>
+                    )}
                 </View>
+
                 <Text style={[theme.typography.h3, { color: theme.colors.text, marginTop: 12 }]}>
-                    {organization?.companyName || 'Your Organization'}
+                    {companyName || 'Your Organization'}
                 </Text>
                 <Text style={[theme.typography.body2, { color: theme.colors.textSecondary, marginTop: 4 }]}>
-                    {(organization?.employeeCount || 0) + " employees · " + (organization?.industry || 'Industry')}
+                    {(employeeCount || 0) + " employees · " + (industry || 'Industry')}
                 </Text>
                 <Button
                     title={hasOrgChanges ? "Save Changes" : "Saved"}
@@ -281,6 +328,8 @@ export const SettingsScreen = ({ navigation }: any) => {
                     size="small"
                 />
             </View>
+
+
 
             <Text style={labelStyle}>Company Name</Text>
             <TextInput style={inputStyle} value={companyName} onChangeText={setCompanyName} placeholder="e.g. Acme Corp" placeholderTextColor={theme.colors.textSecondary} />

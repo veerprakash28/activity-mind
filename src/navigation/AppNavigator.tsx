@@ -13,6 +13,7 @@ import { InsightsScreen } from '../screens/InsightsScreen';
 import { ActivityBankScreen } from '../screens/ActivityBankScreen';
 import { AddActivityScreen } from '../screens/AddActivityScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { CalendarExportScreen } from '../screens/CalendarExportScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -123,11 +124,19 @@ const TabNavigator = () => {
                 name="Calendar"
                 // @ts-ignore
                 component={CalendarScreen}
-                options={{
+                options={({ navigation }: any) => ({
                     tabBarIcon: ({ color, size }: { color: string; size: number }) => (
                         <MaterialCommunityIcons name="calendar-month" size={size} color={color} />
                     ),
-                }}
+                    headerRight: () => (
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('CalendarExport')}
+                            style={{ marginRight: 16 }}
+                        >
+                            <MaterialCommunityIcons name="calendar-export" size={24} color={theme.colors.primary} />
+                        </TouchableOpacity>
+                    ),
+                })}
             />
             <Tab.Screen
                 name="Favorites"
@@ -171,6 +180,14 @@ export const AppNavigator = () => {
                     headerStyle: {
                         backgroundColor: theme.colors.surface,
                     },
+                }}
+            />
+            <RootStack.Screen
+                name="CalendarExport"
+                component={CalendarExportScreen}
+                options={{
+                    headerShown: false,
+                    animation: 'slide_from_bottom',
                 }}
             />
         </RootStack.Navigator>

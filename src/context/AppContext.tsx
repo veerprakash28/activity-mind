@@ -11,6 +11,8 @@ interface Organization {
     workType: 'Remote' | 'Onsite' | 'Hybrid';
     budgetRange: 'Low' | 'Medium' | 'High';
     industry: string;
+    tagline?: string;
+    orgLogoUri?: string;
 }
 
 interface Preferences {

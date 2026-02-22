@@ -1,10 +1,10 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { Calendar } from 'react-native-calendars';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
-import { getDb, ActivityHistory, Activity, markCompleted, unmarkCompleted, removeScheduledActivity } from '../database/database';
+import { getDb, ActivityHistory, Activity, markCompleted, unmarkCompleted, removeScheduledActivity, getMonthlyScheduledActivities } from '../database/database';
 import { ActivityCard } from '../components/ActivityCard';
 import { ActivityDetailModal } from '../components/ActivityDetailModal';
 import { Button } from '../components/Button';
@@ -12,6 +12,7 @@ import { StatusModal, StatusType } from '../components/StatusModal';
 
 export const CalendarScreen = ({ route }: any) => {
     const { theme } = useAppContext();
+    const navigation = useNavigation<any>();
 
     const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
     const [selectedDate, setSelectedDate] = useState(route?.params?.date || todayStr);
@@ -28,17 +29,30 @@ export const CalendarScreen = ({ route }: any) => {
     const [statusConfirmLabel, setStatusConfirmLabel] = useState('Yes');
     const [onStatusConfirm, setOnStatusConfirm] = useState<(() => void) | undefined>(undefined);
 
-    const loadHistory = async () => {
+    const loadHistory = async (baseDate?: string) => {
         try {
-            const db = await getDb();
-            const recent = await db.getAllAsync<ActivityHistory & Activity>(
-                `SELECT h.*, a.name, a.description, a.category, a.duration, a.steps, a.materials, a.estimated_cost, a.difficulty, a.prep_time, a.min_employees, a.max_employees, a.indoor_outdoor, a.remote_compatible, a.is_custom FROM activity_history h JOIN activities a ON h.activity_id = a.id ORDER BY h.scheduled_date DESC`
-            );
+            const targetDateStr = baseDate || selectedDate;
+            const targetDate = new Date(targetDateStr);
+            const year = targetDate.getFullYear();
+            const month = targetDate.getMonth();
 
-            setHistory(recent);
+            let promises = [];
+            // Fetch activities for expanded window to cover swiping (-2 to +2 months)
+            for (let i = -2; i <= 2; i++) {
+                let m = month + i;
+                let y = year;
+                while (m < 0) { m += 12; y--; }
+                while (m > 11) { m -= 12; y++; }
+                promises.push(getMonthlyScheduledActivities(y, m));
+            }
+
+            const results = await Promise.all(promises);
+            const allItems = results.flat();
+
+            setHistory(allItems);
 
             const marks: any = {};
-            recent.forEach(item => {
+            allItems.forEach(item => {
                 const dateStr = item.scheduled_date.split('T')[0];
                 marks[dateStr] = {
                     marked: true,
@@ -116,6 +130,10 @@ export const CalendarScreen = ({ route }: any) => {
                         key={theme.isDark ? 'dark-calendar' : 'light-calendar'}
                         current={selectedDate}
                         onDayPress={handleDayPress}
+                        onMonthChange={(month: any) => {
+                            // When user swipes to a new month, load surrounding months proactively
+                            loadHistory(month.dateString);
+                        }}
                         markedDates={markedDates}
                         theme={{
                             backgroundColor: theme.colors.surface,
@@ -221,5 +239,5 @@ const styles = StyleSheet.create({
     removeScheduleBtn: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
         paddingVertical: 10, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1,
-    },
+    }
 });

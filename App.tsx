@@ -9,6 +9,8 @@ import { AppNavigator } from './src/navigation/AppNavigator';
 import { OnboardingNavigator } from './src/navigation/OnboardingNavigator';
 import { initDb } from './src/database/database';
 import { NotificationService } from './src/utils/NotificationService';
+import { CalendarExportScreen } from './src/screens/CalendarExportScreen';
+import { CalendarExportService } from './src/utils/CalendarExportService';
 
 const MainApp = () => {
   const { theme, themeMode, isFirstLaunch, refreshCategories, preferences } = useAppContext();
@@ -23,6 +25,7 @@ const MainApp = () => {
           NotificationService.setEnabled(preferences.remindersEnabled ?? true); // Setup initial state
           NotificationService.setReminderTime(preferences.reminderTime || '09:00'); // Setup initial timing
         }
+        await CalendarExportService.scheduleMonthlyReminder(); // Schedule end-of-month nudge
         await NotificationService.requestPermissions(); // Request for Smart Reminders
         setDbReady(true);
       } catch (e) {
