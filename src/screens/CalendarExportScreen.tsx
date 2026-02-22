@@ -16,6 +16,8 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+// @ts-ignore
+import * as FileSystem from 'expo-file-system/legacy';
 import { useAppContext } from '../context/AppContext';
 import { getMonthlyScheduledActivities, Activity, ActivityHistory } from '../database/database';
 import { StatusModal } from '../components/StatusModal';
@@ -109,6 +111,206 @@ export const CalendarExportScreen = ({ navigation }: any) => {
             setStatusMessage('Could not generate the calendar image. Please try again.');
             setStatusVisible(true);
         }
+    };
+
+    const handleSVGExport = async () => {
+        setStatusType('info');
+        setStatusTitle('Generating SVG');
+        setStatusMessage('Creating editable vector file for Figma...');
+        setStatusVisible(true);
+
+        try {
+            const svgContent = await generateSVGContent();
+            const filename = `HR_Calendar_${currentDate.getMonth() + 1}_${currentDate.getFullYear()}.svg`;
+            // @ts-ignore
+            const cacheDir = FileSystem.cacheDirectory;
+            const fileUri = `${cacheDir}${filename}`;
+
+            // @ts-ignore
+            await FileSystem.writeAsStringAsync(fileUri, svgContent, {
+                encoding: 'utf8',
+            });
+
+            setStatusVisible(false);
+            await Sharing.shareAsync(fileUri, {
+                mimeType: 'image/svg+xml',
+                dialogTitle: 'Share Editable SVG',
+                UTI: 'public.svg-image',
+            });
+        } catch (err) {
+            console.error('SVG Export failed:', err);
+            setStatusType('error');
+            setStatusTitle('Export Failed');
+            setStatusMessage('Could not generate SVG file.');
+        }
+    };
+
+    const generateSVGContent = async () => {
+        const monthName = currentDate.toLocaleString('default', { month: 'long' });
+        const yearNum = currentDate.getFullYear();
+
+        // Activity Map for Grid
+        const activityMap: { [key: number]: ActivityWithHistory[] } = {};
+        activities.forEach(acc => {
+            const day = new Date(acc.scheduled_date).getDate();
+            if (!activityMap[day]) activityMap[day] = [];
+            activityMap[day].push(acc);
+        });
+
+        // Logo handling
+        let logoBase64 = '';
+        if (organization?.orgLogoUri) {
+            try {
+                // @ts-ignore
+                logoBase64 = await FileSystem.readAsStringAsync(organization.orgLogoUri, {
+                    encoding: 'base64',
+                });
+            } catch (e) {
+                console.warn('Could not read logo for SVG:', e);
+            }
+        }
+
+        const bg = useBranding ? theme.colors.background : activeTheme.backgroundColor;
+        const pColor = primaryColor;
+        const aColor = accentColor;
+
+        let svg = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="1000" height="850" viewBox="0 0 1000 850" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1000" height="850" fill="${bg}" />
+`;
+
+        if (activeTheme.layoutType === 'structured') {
+            svg += `
+    <rect width="1000" height="80" fill="${pColor}" />
+    <text x="500" y="52" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#FFFFFF" text-anchor="middle">HR CALENDAR</text>
+    
+    <line x1="500" y1="120" x2="500" y2="750" stroke="#E8ECF1" stroke-width="1.5" />
+    
+    <text x="100" y="150" font-family="Arial, sans-serif" font-size="34" font-weight="800" fill="${pColor}">${monthName} ${yearNum}</text>
+    
+    <g transform="translate(60, 180)">
+        ${generateSVGGrid(aColor, 60, 60, activityMap)}
+    </g>
+
+    <g transform="translate(540, 120)">
+        <text x="0" y="30" font-family="Arial, sans-serif" font-size="34" font-weight="900" fill="${pColor}">Events</text>
+        <g transform="translate(0, 70)">
+            ${sortedGroupedActivities.slice(0, 4).map((acc, i) => `
+            <g transform="translate(0, ${i * 140})">
+                <rect width="400" height="120" rx="20" fill="#FFFFFF" stroke="${aColor}30" stroke-width="1.5" />
+                <circle cx="50" cy="60" r="30" fill="${aColor}15" />
+                <text x="50" y="68" font-family="Arial, sans-serif" font-size="24" text-anchor="middle">${extractEmoji(acc.name) || '⭐'}</text>
+                <text x="100" y="45" font-family="Arial, sans-serif" font-size="20" font-weight="800" fill="#2D3748">${stripEmoji(acc.name)}</text>
+                <text x="380" y="45" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="${aColor}" text-anchor="end">${acc.display_date || ''}</text>
+                <text x="100" y="75" font-family="Arial, sans-serif" font-size="14" fill="#718096">${acc.description.substring(0, 120).replace(/[<>&"']/g, "")}...</text>
+            </g>`).join('')}
+        </g>
+    </g>
+
+    ${logoBase64 ? `<image x="410" y="770" width="180" height="60" href="data:image/png;base64,${logoBase64}" />` : ''}
+`;
+        } else if (activeTheme.layoutType === 'playful') {
+            svg += `
+    <rect x="60" y="60" width="180" height="40" rx="12" fill="${pColor}" />
+    <text x="150" y="85" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">HR CALENDAR</text>
+
+    <text x="60" y="180" font-family="Arial, sans-serif" font-size="85" font-weight="900" fill="${pColor}" letter-spacing="-2">${monthName}</text>
+    <text x="60" y="230" font-family="Arial, sans-serif" font-size="36" font-weight="300" fill="${aColor}" letter-spacing="10">${yearNum}</text>
+
+    <g transform="translate(60, 300)">
+        ${sortedGroupedActivities.slice(0, 5).map((acc, i) => `
+        <g transform="translate(0, ${i * 105})">
+            <rect x="0" y="0" width="8" height="85" fill="${aColor}" rx="4" />
+            <text x="25" y="25" font-family="Arial, sans-serif" font-size="24" font-weight="900" fill="#2D3748">${extractEmoji(acc.name) || ''} ${stripEmoji(acc.name)}</text>
+            <text x="25" y="50" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="${aColor}">${acc.display_date || ''}</text>
+            <text x="25" y="75" font-family="Arial, sans-serif" font-size="15" fill="#4A5568">${acc.description.substring(0, 80).replace(/[<>&"']/g, "")}...</text>
+        </g>`).join('')}
+    </g>
+
+    <g transform="translate(520, 150)">
+        <rect width="440" height="520" rx="40" fill="#FFFFFF" />
+        <path d="M 0 40 Q 0 0 40 0 L 400 0 Q 440 0 440 40 L 440 50 L 0 50 Z" fill="${aColor}" />
+        <g transform="translate(30, 80)">
+            ${generateSVGGrid(aColor, 54, 60, activityMap)}
+        </g>
+    </g>
+
+    <g transform="translate(60, 780)">
+        ${logoBase64 ? `<image width="140" height="40" href="data:image/png;base64,${logoBase64}" />` : ''}
+        ${customTagline ? `<text x="880" y="30" font-family="Arial, sans-serif" font-size="20" font-style="italic" fill="#A0AEC0" text-anchor="end">${customTagline}</text>` : ''}
+    </g>
+`;
+        } else {
+            svg += `
+    <rect x="780" y="30" width="190" height="35" rx="12" fill="${pColor}" />
+    <text x="875" y="53" font-family="Arial, sans-serif" font-size="13" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">HR CALENDAR</text>
+    
+    <text x="500" y="140" font-family="Arial, sans-serif" font-size="44" font-weight="900" fill="#1A202C" text-anchor="middle">${monthName.toUpperCase()}</text>
+    <text x="500" y="180" font-family="Arial, sans-serif" font-size="20" font-weight="600" fill="#CBD5E0" text-anchor="middle" letter-spacing="4">${yearNum}</text>
+
+    <g transform="translate(100, 220)">
+        ${generateSVGGrid(aColor, 115, 45, activityMap)}
+    </g>
+
+    <line x1="80" y1="520" x2="920" y2="520" stroke="#F0F4F8" stroke-width="1.5" />
+
+    <g transform="translate(80, 560)">
+        ${sortedGroupedActivities.slice(0, 6).map((acc, i) => {
+                const row = Math.floor(i / 3);
+                const col = i % 3;
+                return `
+        <g transform="translate(${col * 280}, ${row * 100})">
+            <text x="0" y="20" font-family="Arial, sans-serif" font-size="13" font-weight="800" fill="${aColor}">${acc.display_date || ''}</text>
+            <text x="0" y="45" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#1A202C">${extractEmoji(acc.name) || ''} ${stripEmoji(acc.name)}</text>
+            <text x="0" y="70" font-family="Arial, sans-serif" font-size="13" fill="#718096">${acc.description.substring(0, 55).replace(/[<>&"']/g, "")}...</text>
+        </g>`;
+            }).join('')}
+    </g>
+
+    <g transform="translate(500, 770)">
+        ${customTagline ? `<text x="0" y="0" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#CBD5E0" text-anchor="middle" letter-spacing="4">${customTagline.toUpperCase()}</text>` : ''}
+        ${logoBase64 ? `<image x="-60" y="10" width="120" height="40" href="data:image/png;base64,${logoBase64}" />` : ''}
+    </g>
+`;
+        }
+
+        svg += '\n</svg>';
+        return svg;
+    };
+
+    const generateSVGGrid = (accent: string, cellW: number, cellH: number, activityMap: { [key: number]: ActivityWithHistory[] }) => {
+        const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+        const yearNum = currentDate.getFullYear();
+        const monthNum = currentDate.getMonth();
+        const daysInMonth = new Date(yearNum, monthNum + 1, 0).getDate();
+        const startOffset = new Date(yearNum, monthNum, 1).getDay();
+        const realOffset = startOffset === 0 ? 6 : startOffset - 1;
+
+        let gridSvg = '';
+        days.forEach((day, i) => {
+            gridSvg += `<text x="${i * cellW + cellW / 2}" y="0" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#E53E3E" text-anchor="middle">${day}</text>`;
+        });
+
+        for (let i = 0; i < 42; i++) {
+            const dayNum = i - realOffset + 1;
+            const isCurrentMonth = dayNum > 0 && dayNum <= daysInMonth;
+            const row = Math.floor(i / 7);
+            const col = i % 7;
+
+            if (isCurrentMonth) {
+                const dayActivities = activityMap[dayNum];
+                gridSvg += `
+        <g transform="translate(${col * cellW}, ${row * cellH + 30})">
+            ${dayActivities && dayActivities.length > 0 ? `
+            <circle cx="${cellW / 2}" cy="${cellH / 2}" r="${cellH / 2.5}" fill="#FFFFFF" stroke="#E8ECF1" stroke-width="1" />
+            <text x="${cellW / 2}" y="${cellH / 2 + 7}" font-family="Arial, sans-serif" font-size="${cellH / 2.5}" text-anchor="middle">${extractEmoji(dayActivities[0].name) || '⭐'}</text>
+            ` : `
+            <text x="${cellW / 2}" y="${cellH / 2 + 6}" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#2D3E50" text-anchor="middle">${dayNum}</text>
+            `}
+        </g>`;
+            }
+        }
+        return gridSvg;
     };
 
     const handleThemeSelect = (theme: UITheme) => {
@@ -489,6 +691,14 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                 <TouchableOpacity onPress={handleExport} style={[styles.mainBtn, { backgroundColor: theme.colors.primary, marginTop: 50 }]}>
                     <Text style={styles.mainBtnText}>Finalize & Share Image</Text>
                 </TouchableOpacity>
+
+                <TouchableOpacity
+                    onPress={handleSVGExport}
+                    style={[styles.secondaryBtn, { borderColor: theme.colors.primary, marginTop: 15 }]}
+                >
+                    <Ionicons name="color-palette-outline" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
+                    <Text style={[styles.secondaryBtnText, { color: theme.colors.primary }]}>Share Editable SVG (for Figma)</Text>
+                </TouchableOpacity>
             </ScrollView>
 
             {/* HIGH-RES MODAL */}
@@ -561,8 +771,10 @@ const styles = StyleSheet.create({
     zoomButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
     zoomText: { color: '#2563EB', fontWeight: '900', fontSize: 11 },
     previewFrame: { borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFF' },
-    mainBtn: { paddingVertical: 20, borderRadius: 20, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10, elevation: 8 },
+    mainBtn: { paddingVertical: 20, borderRadius: 20, alignItems: 'center' },
     mainBtnText: { color: '#FFF', fontWeight: '900', fontSize: 18, letterSpacing: 1 },
+    secondaryBtn: { paddingVertical: 16, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderStyle: 'dashed', flexDirection: 'row' },
+    secondaryBtnText: { fontWeight: '800', fontSize: 15 },
     modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' },
     modalContent: { width: '96%', height: '88%', padding: 24, borderRadius: 36 },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
