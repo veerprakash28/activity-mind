@@ -59,6 +59,14 @@ export const CalendarExportScreen = ({ navigation }: any) => {
     const primaryColor = useBranding ? theme.colors.primary : activeTheme.primaryColor;
     const accentColor = useBranding ? theme.colors.secondary : activeTheme.accentColor;
 
+    // Visibility helpers for live preview & canvas (ensure text is visible on dark backgrounds)
+    const isDarkBackground = useBranding && theme.isDark;
+    const canvasTextColor = isDarkBackground ? '#FFFFFF' : '#1A202C';
+    const canvasSecondaryTextColor = isDarkBackground ? '#CBD5E0' : '#718096';
+    const canvasCardBg = isDarkBackground ? '#2D3748' : '#FFFFFF';
+    const canvasBorderColor = isDarkBackground ? 'rgba(255,255,255,0.1)' : '#E8ECF1';
+    const bg = useBranding ? theme.colors.background : activeTheme.backgroundColor;
+
     useEffect(() => {
         loadData(currentDate);
     }, [currentDate]);
@@ -138,7 +146,6 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                 UTI: 'public.svg-image',
             });
         } catch (err) {
-            console.error('SVG Export failed:', err);
             setStatusType('error');
             setStatusTitle('Export Failed');
             setStatusMessage('Could not generate SVG file.');
@@ -197,12 +204,12 @@ export const CalendarExportScreen = ({ navigation }: any) => {
         <g transform="translate(0, 70)">
             ${sortedGroupedActivities.slice(0, 4).map((acc, i) => `
             <g transform="translate(0, ${i * 140})">
-                <rect width="400" height="120" rx="20" fill="#FFFFFF" stroke="${aColor}30" stroke-width="1.5" />
+                <rect width="400" height="120" rx="20" fill="${canvasCardBg}" stroke="${aColor}30" stroke-width="1.5" />
                 <circle cx="50" cy="60" r="30" fill="${aColor}15" />
                 <text x="50" y="60" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" dominant-baseline="central">${extractEmoji(acc.name) || '⭐'}</text>
-                <text x="100" y="45" font-family="Arial, sans-serif" font-size="20" font-weight="800" fill="#2D3748" dominant-baseline="central">${stripEmoji(acc.name)}</text>
+                <text x="100" y="45" font-family="Arial, sans-serif" font-size="20" font-weight="800" fill="${canvasTextColor}" dominant-baseline="central">${stripEmoji(acc.name)}</text>
                 <text x="380" y="45" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="${aColor}" text-anchor="end" dominant-baseline="central">${acc.display_date || ''}</text>
-                <text x="100" y="75" font-family="Arial, sans-serif" font-size="14" fill="#718096" dominant-baseline="central">${acc.description.substring(0, 120).replace(/[<>&"']/g, "")}...</text>
+                <text x="100" y="75" font-family="Arial, sans-serif" font-size="14" fill="${canvasSecondaryTextColor}" dominant-baseline="central">${acc.description.substring(0, 120).replace(/[<>&"']/g, "")}...</text>
             </g>`).join('')}
         </g>
     </g>
@@ -221,14 +228,14 @@ export const CalendarExportScreen = ({ navigation }: any) => {
         ${sortedGroupedActivities.slice(0, 5).map((acc, i) => `
         <g transform="translate(0, ${i * 105})">
             <rect x="0" y="0" width="8" height="85" fill="${aColor}" rx="4" />
-            <text x="25" y="25" font-family="Arial, sans-serif" font-size="24" font-weight="900" fill="#2D3748" dominant-baseline="central">${extractEmoji(acc.name) || ''} ${stripEmoji(acc.name)}</text>
+            <text x="25" y="25" font-family="Arial, sans-serif" font-size="24" font-weight="900" fill="${canvasTextColor}" dominant-baseline="central">${extractEmoji(acc.name) || ''} ${stripEmoji(acc.name)}</text>
             <text x="25" y="50" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="${aColor}" dominant-baseline="central">${acc.display_date || ''}</text>
-            <text x="25" y="75" font-family="Arial, sans-serif" font-size="15" fill="#4A5568" dominant-baseline="central">${acc.description.substring(0, 80).replace(/[<>&"']/g, "")}...</text>
+            <text x="25" y="75" font-family="Arial, sans-serif" font-size="15" fill="${isDarkBackground ? '#CBD5E0' : '#4A5568'}" dominant-baseline="central">${acc.description.substring(0, 80).replace(/[<>&"']/g, "")}...</text>
         </g>`).join('')}
     </g>
 
     <g transform="translate(520, 150)">
-        <rect width="440" height="520" rx="40" fill="#FFFFFF" />
+        <rect width="440" height="520" rx="40" fill="${isDarkBackground ? '#1A202C' : '#FFFFFF'}" />
         <path d="M 0 40 Q 0 0 40 0 L 400 0 Q 440 0 440 40 L 440 50 L 0 50 Z" fill="${aColor}" />
         <g transform="translate(30, 80)">
             ${generateSVGGrid(aColor, 54, 60, activityMap)}
@@ -237,7 +244,7 @@ export const CalendarExportScreen = ({ navigation }: any) => {
 
     <g transform="translate(60, 780)">
         ${logoBase64 ? `<image width="140" height="40" href="data:image/png;base64,${logoBase64}" />` : ''}
-        ${customTagline ? `<text x="880" y="30" font-family="Arial, sans-serif" font-size="20" font-style="italic" fill="#A0AEC0" text-anchor="end">${customTagline}</text>` : ''}
+        ${customTagline ? `<text x="880" y="30" font-family="Arial, sans-serif" font-size="20" font-style="italic" fill="${canvasSecondaryTextColor}" text-anchor="end">${customTagline}</text>` : ''}
     </g>
 `;
         } else {
@@ -245,14 +252,14 @@ export const CalendarExportScreen = ({ navigation }: any) => {
     <rect x="780" y="30" width="190" height="35" rx="12" fill="${pColor}" />
     <text x="875" y="53" font-family="Arial, sans-serif" font-size="13" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">HR CALENDAR</text>
     
-    <text x="500" y="140" font-family="Arial, sans-serif" font-size="44" font-weight="900" fill="#1A202C" text-anchor="middle">${monthName.toUpperCase()}</text>
-    <text x="500" y="180" font-family="Arial, sans-serif" font-size="20" font-weight="600" fill="#CBD5E0" text-anchor="middle" letter-spacing="4">${yearNum}</text>
+    <text x="500" y="140" font-family="Arial, sans-serif" font-size="44" font-weight="900" fill="${canvasTextColor}" text-anchor="middle">${monthName.toUpperCase()}</text>
+    <text x="500" y="180" font-family="Arial, sans-serif" font-size="20" font-weight="600" fill="${canvasSecondaryTextColor}" text-anchor="middle" letter-spacing="4">${yearNum}</text>
 
     <g transform="translate(100, 220)">
         ${generateSVGGrid(aColor, 115, 45, activityMap)}
     </g>
 
-    <line x1="80" y1="520" x2="920" y2="520" stroke="#F0F4F8" stroke-width="1.5" />
+    <line x1="80" y1="520" x2="920" y2="520" stroke="${canvasBorderColor}" stroke-width="1.5" />
 
     <g transform="translate(80, 560)">
         ${sortedGroupedActivities.slice(0, 6).map((acc, i) => {
@@ -261,14 +268,14 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                 return `
         <g transform="translate(${col * 280}, ${row * 100})">
             <text x="0" y="20" font-family="Arial, sans-serif" font-size="13" font-weight="800" fill="${aColor}" dominant-baseline="central">${acc.display_date || ''}</text>
-            <text x="0" y="45" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#1A202C" dominant-baseline="central">${extractEmoji(acc.name) || ''} ${stripEmoji(acc.name)}</text>
-            <text x="0" y="70" font-family="Arial, sans-serif" font-size="13" fill="#718096" dominant-baseline="central">${acc.description.substring(0, 55).replace(/[<>&"']/g, "")}...</text>
+            <text x="0" y="45" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="${canvasTextColor}" dominant-baseline="central">${extractEmoji(acc.name) || ''} ${stripEmoji(acc.name)}</text>
+            <text x="0" y="70" font-family="Arial, sans-serif" font-size="13" fill="${canvasSecondaryTextColor}" dominant-baseline="central">${acc.description.substring(0, 55).replace(/[<>&"']/g, "")}...</text>
         </g>`;
             }).join('')}
     </g>
 
     <g transform="translate(500, 770)">
-        ${customTagline ? `<text x="0" y="0" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#CBD5E0" text-anchor="middle" letter-spacing="4">${customTagline.toUpperCase()}</text>` : ''}
+        ${customTagline ? `<text x="0" y="0" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="${canvasSecondaryTextColor}" text-anchor="middle" letter-spacing="4">${customTagline.toUpperCase()}</text>` : ''}
         ${logoBase64 ? `<image x="-60" y="10" width="120" height="40" href="data:image/png;base64,${logoBase64}" />` : ''}
     </g>
 `;
@@ -302,10 +309,10 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                 gridSvg += `
         <g transform="translate(${col * cellW}, ${row * cellH + 45})">
             ${dayActivities && dayActivities.length > 0 ? `
-            <circle cx="${cellW / 2}" cy="${cellH / 2}" r="${cellH / 2.5}" fill="#FFFFFF" stroke="#E8ECF1" stroke-width="1" />
-            <text x="${cellW / 2}" y="${cellH / 2}" font-family="Arial, sans-serif" font-size="${cellH / 2.5}" text-anchor="middle" dominant-baseline="central">${extractEmoji(dayActivities[0].name) || '⭐'}</text>
+            <circle cx="${cellW / 2}" cy="${cellH / 2}" r="${cellH / 2.5}" fill="${canvasCardBg}" stroke="${canvasBorderColor}" stroke-width="1" />
+            <text x="${cellW / 2}" y="${cellH / 2}" font-family="Arial, sans-serif" font-size="${cellH / 2.5}" text-anchor="middle" dominant-baseline="central" fill="${canvasTextColor}">${extractEmoji(dayActivities[0].name) || '⭐'}</text>
             ` : `
-            <text x="${cellW / 2}" y="${cellH / 2}" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#2D3E50" text-anchor="middle" dominant-baseline="central">${dayNum}</text>
+            <text x="${cellW / 2}" y="${cellH / 2}" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="${canvasTextColor}" text-anchor="middle" dominant-baseline="central">${dayNum}</text>
             `}
         </g>`;
             }
@@ -412,15 +419,15 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                                 {isCurrentMonth && (
                                     <>
                                         {dayActivities && dayActivities.length > 0 ? (
-                                            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E8ECF1', alignItems: 'center', justifyContent: 'center' }}>
+                                            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: canvasCardBg, borderWidth: 1, borderColor: canvasBorderColor, alignItems: 'center', justifyContent: 'center' }}>
                                                 {extractEmoji(dayActivities[0].name) ? (
-                                                    <Text style={{ fontSize: 22 }}>{extractEmoji(dayActivities[0].name)}</Text>
+                                                    <Text style={{ fontSize: 22, color: canvasTextColor }}>{extractEmoji(dayActivities[0].name)}</Text>
                                                 ) : (
                                                     <MaterialCommunityIcons name={getIconForCategory(dayActivities[0].category, dayActivities[0].name) as any} size={24} color={currentAccent} />
                                                 )}
                                             </View>
                                         ) : (
-                                            <Text style={{ fontSize: 16, fontWeight: '700', color: '#2D3E50' }}>{dayNum}</Text>
+                                            <Text style={{ fontSize: 16, fontWeight: '700', color: canvasTextColor }}>{dayNum}</Text>
                                         )}
                                     </>
                                 )}
@@ -434,8 +441,6 @@ export const CalendarExportScreen = ({ navigation }: any) => {
 
     // LAYOUT 1: STRUCTURED PRO (FULLY REVERTED TO ORIGINAL WORKING VERSION)
     const renderStructuredLayout = () => {
-        const bg = useBranding ? theme.colors.background : activeTheme.backgroundColor;
-
         return (
             <View style={{ width: CANVAS_WIDTH, minHeight: 850, backgroundColor: bg, paddingBottom: 60 }}>
                 <View style={{ backgroundColor: primaryColor, paddingVertical: 24, alignItems: 'center', justifyContent: 'center' }}>
@@ -454,8 +459,8 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                         {renderCalendarGrid(accentColor)}
 
                         {customTagline ? (
-                            <View style={{ marginTop: 60, width: '100%', paddingVertical: 20, paddingHorizontal: 24, borderRadius: 18, borderWidth: 2, borderColor: accentColor + '40', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF' }}>
-                                <Text style={{ fontSize: 16, fontWeight: '600', color: '#2D3748', textAlign: 'center' }}>{customTagline}</Text>
+                            <View style={{ marginTop: 60, width: '100%', paddingVertical: 20, paddingHorizontal: 24, borderRadius: 18, borderWidth: 2, borderColor: accentColor + '40', alignItems: 'center', justifyContent: 'center', backgroundColor: canvasCardBg }}>
+                                <Text style={{ fontSize: 16, fontWeight: '600', color: canvasTextColor, textAlign: 'center' }}>{customTagline}</Text>
                             </View>
                         ) : null}
                     </View>
@@ -464,7 +469,7 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                         <Text style={{ fontSize: 38, fontWeight: '900', color: primaryColor, marginBottom: 30, textAlign: 'center' }}>Events</Text>
                         <View style={{ gap: 20 }}>
                             {sortedGroupedActivities.slice(0, 4).map((acc, i) => (
-                                <View key={i} style={{ flexDirection: 'row', backgroundColor: '#FFF', borderRadius: 20, padding: 24, alignItems: 'flex-start', borderWidth: 1.5, borderColor: accentColor + '30', gap: 20 }}>
+                                <View key={i} style={{ flexDirection: 'row', backgroundColor: canvasCardBg, borderRadius: 20, padding: 24, alignItems: 'flex-start', borderWidth: 1.5, borderColor: accentColor + '30', gap: 20 }}>
                                     <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: accentColor + '10', justifyContent: 'center', alignItems: 'center' }}>
                                         {extractEmoji(acc.name) ? (
                                             <Text style={{ fontSize: 24 }}>{extractEmoji(acc.name)}</Text>
@@ -474,10 +479,10 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                                            <Text style={{ fontSize: 20, fontWeight: '800', color: '#2D3748', flex: 1 }} numberOfLines={1}>{stripEmoji(acc.name)}</Text>
+                                            <Text style={{ fontSize: 20, fontWeight: '800', color: canvasTextColor, flex: 1 }} numberOfLines={1}>{stripEmoji(acc.name)}</Text>
                                             <Text style={{ fontSize: 15, fontWeight: '800', color: accentColor }}>{acc.display_date}</Text>
                                         </View>
-                                        <Text style={{ fontSize: 15, color: '#718096', lineHeight: 22 }} numberOfLines={3}>{acc.description}</Text>
+                                        <Text style={{ fontSize: 15, color: canvasSecondaryTextColor, lineHeight: 22 }} numberOfLines={3}>{acc.description}</Text>
                                     </View>
                                 </View>
                             ))}
@@ -496,7 +501,7 @@ export const CalendarExportScreen = ({ navigation }: any) => {
 
     // LAYOUT 2: MODERN PLAYFUL (ALIGNED)
     const renderPlayfulLayout = () => (
-        <View style={{ width: CANVAS_WIDTH, minHeight: 900, backgroundColor: activeTheme.backgroundColor, padding: 60 }}>
+        <View style={{ width: CANVAS_WIDTH, minHeight: 900, backgroundColor: bg, padding: 60 }}>
             <View style={{ position: 'absolute', top: 60, left: 60, backgroundColor: primaryColor, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 }}>
                 <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 16, letterSpacing: 2 }}>HR CALENDAR</Text>
             </View>
@@ -513,17 +518,17 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                                     {extractEmoji(acc.name) && (
                                         <Text style={{ fontSize: 24 }}>{extractEmoji(acc.name)}</Text>
                                     )}
-                                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#2D3748' }}>{stripEmoji(acc.name)}</Text>
+                                    <Text style={{ fontSize: 24, fontWeight: '900', color: canvasTextColor }}>{stripEmoji(acc.name)}</Text>
                                 </View>
                                 <Text style={{ fontSize: 18, fontWeight: '700', color: accentColor, marginTop: 4 }}>{acc.display_date}</Text>
-                                <Text style={{ fontSize: 16, color: '#4A5568', marginTop: 6, lineHeight: 22 }} numberOfLines={2}>{acc.description}</Text>
+                                <Text style={{ fontSize: 16, color: canvasSecondaryTextColor, marginTop: 6, lineHeight: 22 }} numberOfLines={2}>{acc.description}</Text>
                             </View>
                         ))}
                     </View>
                 </View>
 
                 <View style={{ width: 440 }}>
-                    <View style={{ backgroundColor: '#FFF', borderRadius: 40, padding: 40, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 25, elevation: 15 }}>
+                    <View style={{ backgroundColor: canvasCardBg, borderRadius: 40, padding: 40, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 25, elevation: 15 }}>
                         <View style={{ height: 25, width: '100%', borderTopLeftRadius: 40, borderTopRightRadius: 40, backgroundColor: accentColor, position: 'absolute', top: 0, left: 0 }} />
                         {renderCalendarGrid(accentColor)}
                     </View>
@@ -531,7 +536,7 @@ export const CalendarExportScreen = ({ navigation }: any) => {
             </View>
 
             <View style={{ position: 'absolute', bottom: 60, left: 60, right: 60, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                {customTagline && <Text style={{ fontSize: 20, color: '#A0AEC0', fontStyle: 'italic', fontWeight: '500' }}>{customTagline}</Text>}
+                {customTagline && <Text style={{ fontSize: 20, color: canvasSecondaryTextColor, fontStyle: 'italic', fontWeight: '500' }}>{customTagline}</Text>}
                 {organization?.orgLogoUri && <Image source={{ uri: organization.orgLogoUri }} style={{ width: 140, height: 40 }} resizeMode="contain" />}
             </View>
         </View>
@@ -539,14 +544,14 @@ export const CalendarExportScreen = ({ navigation }: any) => {
 
     // LAYOUT 3: ULTRA MINIMAL
     const renderMinimalLayout = () => (
-        <View style={{ width: CANVAS_WIDTH, minHeight: 800, backgroundColor: '#FFF', padding: 80, alignItems: 'center', paddingBottom: 60 }}>
+        <View style={{ width: CANVAS_WIDTH, minHeight: 800, backgroundColor: bg, padding: 80, alignItems: 'center', paddingBottom: 60 }}>
             <View style={{ position: 'absolute', top: 30, right: 30, backgroundColor: primaryColor, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5, elevation: 3 }}>
                 <Text style={{ fontSize: 13, fontWeight: '900', color: '#FFF', letterSpacing: 2 }}>HR CALENDAR</Text>
             </View>
 
             <View style={{ alignItems: 'center', marginTop: 20 }}>
-                <Text style={{ fontSize: 44, fontWeight: '900', color: '#1A202C' }}>{monthName.toUpperCase()}</Text>
-                <Text style={{ fontSize: 20, fontWeight: '600', color: '#CBD5E0', marginTop: -5, letterSpacing: 4 }}>{yearNum}</Text>
+                <Text style={{ fontSize: 44, fontWeight: '900', color: canvasTextColor }}>{monthName.toUpperCase()}</Text>
+                <Text style={{ fontSize: 20, fontWeight: '600', color: canvasSecondaryTextColor, marginTop: -5, letterSpacing: 4 }}>{yearNum}</Text>
             </View>
             <View style={{ width: '80%' }}>
                 {renderCalendarGrid(accentColor)}
@@ -561,14 +566,14 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             {extractEmoji(acc.name) && <Text style={{ fontSize: 16 }}>{extractEmoji(acc.name)}</Text>}
-                            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1A202C' }}>{stripEmoji(acc.name)}</Text>
+                            <Text style={{ fontSize: 18, fontWeight: '800', color: canvasTextColor }}>{stripEmoji(acc.name)}</Text>
                         </View>
-                        <Text style={{ fontSize: 13, color: '#718096', marginTop: 4, lineHeight: 18 }}>{acc.description}</Text>
+                        <Text style={{ fontSize: 13, color: canvasSecondaryTextColor, marginTop: 4, lineHeight: 18 }}>{acc.description}</Text>
                     </View>
                 ))}
             </View>
             <View style={{ marginTop: 'auto', alignItems: 'center', paddingTop: 80 }}>
-                {customTagline && <Text style={{ color: '#CBD5E0', fontSize: 14, letterSpacing: 4, fontWeight: '600', marginBottom: 20 }}>{customTagline.toUpperCase()}</Text>}
+                {customTagline && <Text style={{ color: canvasSecondaryTextColor, fontSize: 14, letterSpacing: 4, fontWeight: '600', marginBottom: 20 }}>{customTagline.toUpperCase()}</Text>}
                 {organization?.orgLogoUri && <Image source={{ uri: organization.orgLogoUri }} style={{ width: 120, height: 40 }} resizeMode="contain" />}
             </View>
         </View>
@@ -605,11 +610,11 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                 </TouchableOpacity>
 
                 <View style={styles.headerTitleContainer}>
-                    <TouchableOpacity onPress={handlePrevMonth} style={styles.navBtn}>
+                    <TouchableOpacity onPress={handlePrevMonth} style={[styles.navBtn, { backgroundColor: theme.colors.surface }]}>
                         <Ionicons name="chevron-back" size={18} color={theme.colors.primary} />
                     </TouchableOpacity>
                     <Text style={[theme.typography.h4, { color: theme.colors.text, marginHorizontal: 15 }]}>{monthTitle}</Text>
-                    <TouchableOpacity onPress={handleNextMonth} style={styles.navBtn}>
+                    <TouchableOpacity onPress={handleNextMonth} style={[styles.navBtn, { backgroundColor: theme.colors.surface }]}>
                         <Ionicons name="chevron-forward" size={18} color={theme.colors.primary} />
                     </TouchableOpacity>
                 </View>
@@ -622,15 +627,15 @@ export const CalendarExportScreen = ({ navigation }: any) => {
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
                 {/* Branding & Style Controls */}
-                <View style={styles.brandingBox}>
+                <View style={[styles.brandingBox, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                     <View style={styles.controlsRow}>
                         <View style={{ flex: 1 }}>
-                            <Text style={styles.label}>Visual Template</Text>
+                            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Visual Template</Text>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                 {EXPORT_UI_THEMES.map((t) => (
                                     <TouchableOpacity
                                         key={t.id}
-                                        style={[styles.styleBtn, { borderColor: activeTheme.id === t.id ? theme.colors.primary : theme.colors.border }]}
+                                        style={[styles.styleBtn, { borderColor: activeTheme.id === t.id ? theme.colors.primary : theme.colors.border, backgroundColor: theme.colors.surface }]}
                                         onPress={() => handleThemeSelect(t)}
                                     >
                                         <Text style={[styles.styleBtnText, { color: activeTheme.id === t.id ? theme.colors.primary : theme.colors.text }]}>{t.name}</Text>
@@ -640,7 +645,7 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                         </View>
                     </View>
 
-                    <View style={styles.brandingToggleRow}>
+                    <View style={[styles.brandingToggleRow, { borderTopColor: theme.colors.border }]}>
                         <View style={{ flex: 1 }}>
                             <Text style={[theme.typography.h4, { color: theme.colors.text }]}>Use Branding Colors</Text>
                             <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>Apply your company's primary & secondary theme</Text>
@@ -655,7 +660,7 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                 </View>
 
                 <TextInput
-                    style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, marginTop: 20 }]}
+                    style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, marginTop: 20 }]}
                     value={customTagline}
                     onChangeText={setCustomTagline}
                     placeholder="Custom footer / mission text..."
@@ -665,10 +670,10 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                 {/* --- LIVE PREVIEW --- */}
                 <View style={styles.previewSection}>
                     <View style={styles.previewHeaderRow}>
-                        <Text style={theme.typography.h4}>Live Preview</Text>
-                        <TouchableOpacity onPress={() => setPreviewVisible(true)} style={styles.zoomButton}>
+                        <Text style={[theme.typography.h4, { color: theme.colors.text }]}>Live Preview</Text>
+                        <TouchableOpacity onPress={() => setPreviewVisible(true)} style={[styles.zoomButton, { backgroundColor: theme.colors.primaryLight }]}>
                             <Ionicons name="expand" size={16} color={theme.colors.primary} />
-                            <Text style={styles.zoomText}> HIGH-RES VIEW</Text>
+                            <Text style={[styles.zoomText, { color: theme.colors.primary }]}> HIGH-RES VIEW</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -707,7 +712,7 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                     <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
                         <View style={styles.modalHeader}>
                             <View>
-                                <Text style={theme.typography.h2}>High Resolution View</Text>
+                                <Text style={[theme.typography.h2, { color: theme.colors.text }]}>High Resolution View</Text>
                                 <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>Scroll to see all events</Text>
                             </View>
                             <TouchableOpacity onPress={() => setPreviewVisible(false)}>
@@ -715,10 +720,10 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                             </TouchableOpacity>
                         </View>
 
-                        <View style={styles.modalScrollArea}>
+                        <View style={[styles.modalScrollArea, { backgroundColor: theme.isDark ? '#0F172A' : '#F1F5F9' }]}>
                             <ScrollView horizontal>
                                 <ScrollView showsVerticalScrollIndicator={true}>
-                                    <View style={{ width: CANVAS_WIDTH, borderRadius: 20, overflow: 'hidden', backgroundColor: '#FFF' }}>
+                                    <View style={{ width: CANVAS_WIDTH, borderRadius: 20, overflow: 'hidden', backgroundColor: theme.isDark ? '#1E293B' : '#FFF' }}>
                                         {renderCanvasContent()}
                                     </View>
                                 </ScrollView>
@@ -755,22 +760,22 @@ const styles = StyleSheet.create({
 
     },
     headerTitleContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-    navBtn: { padding: 8, borderRadius: 10, backgroundColor: '#F7FAFC' },
+    navBtn: { padding: 8, borderRadius: 10 },
     backButton: { padding: 4 },
     exportBtn: { padding: 4 },
     scrollContent: { padding: 20 },
-    brandingBox: { padding: 15, borderRadius: 20, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
+    brandingBox: { padding: 15, borderRadius: 20, borderWidth: 1 },
     controlsRow: { marginBottom: 15 },
-    label: { fontSize: 11, fontWeight: 'bold', color: '#64748B', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 },
-    styleBtn: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 14, borderWidth: 2, marginRight: 10, backgroundColor: '#FFF' },
+    label: { fontSize: 11, fontWeight: 'bold', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 },
+    styleBtn: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 14, borderWidth: 2, marginRight: 10 },
     styleBtnText: { fontWeight: 'bold', fontSize: 14 },
-    brandingToggleRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingTop: 15, borderTopWidth: 1, borderTopColor: '#E2E8F0' },
-    input: { height: 56, borderRadius: 16, borderWidth: 1.5, paddingHorizontal: 20, backgroundColor: '#FFF', fontSize: 16 },
+    brandingToggleRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingTop: 15, borderTopWidth: 1 },
+    input: { height: 56, borderRadius: 16, borderWidth: 1.5, paddingHorizontal: 20, fontSize: 16 },
     previewSection: { marginTop: 30 },
     previewHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-    zoomButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
-    zoomText: { color: '#2563EB', fontWeight: '900', fontSize: 11 },
-    previewFrame: { borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFF' },
+    zoomButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
+    zoomText: { fontWeight: '900', fontSize: 11 },
+    previewFrame: { borderRadius: 24, overflow: 'hidden', borderWidth: 1 },
     mainBtn: { paddingVertical: 20, borderRadius: 20, alignItems: 'center' },
     mainBtnText: { color: '#FFF', fontWeight: '900', fontSize: 18, letterSpacing: 1 },
     secondaryBtn: { paddingVertical: 16, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderStyle: 'dashed', flexDirection: 'row' },
@@ -778,5 +783,5 @@ const styles = StyleSheet.create({
     modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' },
     modalContent: { width: '96%', height: '88%', padding: 24, borderRadius: 36 },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
-    modalScrollArea: { flex: 1, borderRadius: 20, overflow: 'hidden', backgroundColor: '#F1F5F9', padding: 5 },
+    modalScrollArea: { flex: 1, borderRadius: 20, overflow: 'hidden', padding: 5 },
 });

@@ -2,8 +2,9 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeType, getTheme, Theme, CustomColors } from '../theme';
-import { getUniqueCategories, renameCategory as renameCategoryDb } from '../database/database';
+import { getUniqueCategories, renameCategory as renameCategoryDb, rescheduleAllNotifications } from '../database/database';
 import { VersionService, UpdateInfo } from '../utils/VersionService';
+import { NotificationService } from '../utils/NotificationService';
 
 interface Organization {
     companyName: string;
@@ -103,6 +104,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 if (firstLaunchStr === 'false') setIsFirstLaunchState(false);
                 if (colorsJson) setCustomColorsState(JSON.parse(colorsJson));
 
+                // Set Notification Service initial state
+                if (prefsJson) {
+                    const loadedPrefs = JSON.parse(prefsJson);
+                    NotificationService.setEnabled(loadedPrefs.remindersEnabled !== false);
+                    NotificationService.setReminderTime(loadedPrefs.reminderTime || '09:00');
+                } else {
+                    NotificationService.setEnabled(true);
+                    NotificationService.setReminderTime('09:00');
+                }
+
                 // Load initial categories
                 const cats = await getUniqueCategories();
                 setCategories(cats);
@@ -138,12 +149,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const newPrefs = { ...preferences, remindersEnabled: enabled };
         setPreferences(newPrefs);
         await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(newPrefs));
+
+        NotificationService.setEnabled(enabled);
+        await rescheduleAllNotifications();
     };
 
     const setReminderTime = async (time: string) => {
         const newPrefs = { ...preferences, reminderTime: time };
         setPreferences(newPrefs);
         await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(newPrefs));
+
+        NotificationService.setReminderTime(time);
+        await rescheduleAllNotifications();
     };
 
     const setOrganization = async (org: Organization) => {

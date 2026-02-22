@@ -384,9 +384,18 @@ export const SettingsScreen = ({ navigation }: any) => {
                     </View>
                     <Switch
                         value={preferences.remindersEnabled}
-                        onValueChange={(val) => {
-                            setRemindersEnabled(val);
-                            NotificationService.setEnabled(val);
+                        onValueChange={async (val) => {
+                            if (val) {
+                                const granted = await NotificationService.requestPermissions();
+                                if (!granted) {
+                                    Alert.alert(
+                                        "Permissions Required",
+                                        "Please enable notifications in your phone settings to receive team activity reminders."
+                                    );
+                                    return;
+                                }
+                            }
+                            await setRemindersEnabled(val);
                         }}
                         trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
                         thumbColor={Platform.OS === 'ios' ? undefined : (preferences.remindersEnabled ? '#FFF' : '#f4f3f4')}

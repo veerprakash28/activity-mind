@@ -2,7 +2,6 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 // Configure notification behavior
-// Internal state to respect user preferences
 let _enabled = true;
 let _reminderTime = '09:00';
 
@@ -50,35 +49,35 @@ export const NotificationService = {
     },
 
     /**
-     * Schedule a reminder for an activity 30 minutes before it starts
-     * @param historyId The ID of the activity history record
-     * @param activityName The name of the activity
-     * @param dateString The ISO string of the scheduled date
-     * @returns The notification ID if scheduled, or null
+     * Schedule a reminder for an activity at the preferred time on the day it occurs
      */
     scheduleActivityReminder: async (historyId: number, activityName: string, dateString: string) => {
-        if (!_enabled) return null;
+        if (!_enabled) {
+            return null;
+        }
 
         const scheduledDate = new Date(dateString);
 
-        // Calculate trigger time based on preferred reminder time (safety fallback to 9AM)
+        // Calculate trigger time based on preferred reminder time
         const [hours, minutes] = (_reminderTime || '09:00').split(':').map(Number);
         const triggerDate = new Date(scheduledDate);
         triggerDate.setHours(hours, minutes, 0, 0);
 
-        // If normalized date is 12PM but user wants 9AM, we just set it.
-        // Safety: If trigger time is in the past, don't schedule
-        if (triggerDate <= new Date()) {
+        const now = new Date();
+
+        // If normalized date is "today" but the time has already passed, we can't schedule it for today.
+        // However, for testing, we might want to schedule it 1 minute from now if it's for today.
+        // For the real app logic: If it's in the past, we skip.
+        if (triggerDate <= now) {
             return null;
         }
 
-        console.log(`[NotificationService] Scheduling reminder for "${activityName}" at ${triggerDate.toLocaleString()}`);
 
         try {
             const notificationId = await Notifications.scheduleNotificationAsync({
                 content: {
                     title: "Activity Reminder 🔔",
-                    body: `Your team activity "${activityName}" starts in 30 minutes!`,
+                    body: `Your team activity "${activityName}" is coming up!`,
                     data: { historyId },
                     sound: true,
                     priority: Notifications.AndroidNotificationPriority.HIGH,
@@ -97,58 +96,46 @@ export const NotificationService = {
     },
 
     /**
-     * Send an immediate test notification to verify permissions and setup
+     * Cancel all scheduled notifications (useful for rescheduling)
      */
-    sendImmediateTestNotification: async () => {
+    cancelAllScheduledNotifications: async () => {
         try {
-            await Notifications.scheduleNotificationAsync({
-                content: {
-                    title: "Test Notification 🚀",
-                    body: "Smart Reminders are working perfectly! You'll get notified 30 mins before your team activities.",
-                    sound: true,
-                    priority: Notifications.AndroidNotificationPriority.HIGH,
-                },
-                trigger: null, // Send immediately
-            });
-            return true;
+            await Notifications.cancelAllScheduledNotificationsAsync();
         } catch (error) {
-            console.error("[NotificationService] Failed to send test notification:", error);
-            return false;
+            console.error("[NotificationService] Failed to cancel all notifications:", error);
         }
     },
 
     /**
-     * Add a listener for when a notification is received while the app is in the foreground
+     * Add a listener for when a notification is received
      */
     addListener: (handler: (notification: Notifications.Notification) => void) => {
         return Notifications.addNotificationReceivedListener(handler);
     },
 
     /**
-     * Add a listener for when the user interacts with a notification
+     * Add a listener for interaction
      */
     addResponseListener: (handler: (response: Notifications.NotificationResponse) => void) => {
         return Notifications.addNotificationResponseReceivedListener(handler);
     },
 
     /**
-     * Remove a notification listener
+     * Remove a listener
      */
     removeListener: (subscription: Notifications.Subscription) => {
         subscription.remove();
     },
 
     /**
-     * Cancel a scheduled notification
-     * @param notificationId The ID returned by scheduleNotificationAsync
+     * Cancel a specific reminder
      */
     cancelActivityReminder: async (notificationId: string) => {
         if (!notificationId) return;
         try {
             await Notifications.cancelScheduledNotificationAsync(notificationId);
-            console.log(`[NotificationService] Cancelled notification: ${notificationId}`);
         } catch (error) {
-            console.error("[NotificationService] Failed to cancel notification:", error);
+            // Silently fail if ID is invalid or already fired
         }
     }
 };

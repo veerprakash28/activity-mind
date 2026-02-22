@@ -44,9 +44,7 @@ export const CalendarExportService = {
             });
 
             await AsyncStorage.setItem(LAST_REMINDER_MONTH, currentMonth);
-            console.log(`[CalendarExportService] Reminder scheduled for ${targetDate.toDateString()}`);
         } catch (e) {
-            console.error('[CalendarExportService] Failed to schedule monthly reminder:', e);
         }
     }
 };

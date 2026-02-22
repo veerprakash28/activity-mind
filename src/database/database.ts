@@ -107,21 +107,18 @@ export const initDb = async () => {
         const tableInfo = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(activities)`);
         const hasIsCustom = tableInfo.some(col => col.name === 'is_custom');
         if (!hasIsCustom) {
-            console.log("Migration: Adding is_custom column to activities table...");
             await db.execAsync(`ALTER TABLE activities ADD COLUMN is_custom INTEGER DEFAULT 0;`);
         }
 
         const historyInfo = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(activity_history)`);
         const hasNotificationId = historyInfo.some(col => col.name === 'notification_id');
         if (!hasNotificationId) {
-            console.log("Migration: Adding notification_id column to activity_history table...");
             await db.execAsync(`ALTER TABLE activity_history ADD COLUMN notification_id TEXT;`);
         }
 
         // Migration: Add recurring_pattern to activities
         const hasRecurringPattern = tableInfo.some(col => col.name === 'recurring_pattern');
         if (!hasRecurringPattern) {
-            console.log("Migration: Adding recurring_pattern column to activities table...");
             await db.execAsync(`ALTER TABLE activities ADD COLUMN recurring_pattern TEXT;`);
         }
     } catch (e) {
@@ -138,7 +135,6 @@ export const initDb = async () => {
     const missingAny = INITIAL_ACTIVITIES.some(a => !existingNameSet.has(a.name));
 
     if (builtInCount < INITIAL_ACTIVITIES.length || missingAny) {
-        console.log(`Seeding activities... (${builtInCount} existing, ${INITIAL_ACTIVITIES.length} in bank)`);
 
         if (builtInCount === 0) {
             // Fresh install — seed everything
@@ -173,7 +169,6 @@ export const initDb = async () => {
                 }
             }
         }
-        console.log('Seeding complete.');
     }
 
     // Cleanup: Normalize all categories to Title Case to prevent duplicates (collision fix)
@@ -235,7 +230,7 @@ export const getUpcomingActivity = async () => {
     const todayNoon = normalizeDate(now);
 
     return await db.getFirstAsync<ActivityHistory & Activity>(
-        `SELECT h.*, a.name, a.category, a.duration FROM activity_history h JOIN activities a ON h.activity_id = a.id WHERE h.scheduled_date >= ? AND h.completed = 0 ORDER BY h.scheduled_date ASC LIMIT 1`,
+        `SELECT a.name, a.category, a.duration, h.*, h.id as id FROM activity_history h JOIN activities a ON h.activity_id = a.id WHERE h.scheduled_date >= ? AND h.completed = 0 ORDER BY h.scheduled_date ASC LIMIT 1`,
         [todayNoon]
     );
 };
@@ -278,6 +273,52 @@ export const saveHistory = async (activityId: number, scheduledDate: string) => 
     }
 
     return historyId;
+};
+
+/**
+ * Fetch all upcoming activities that haven't been completed yet.
+ * Used for global notification rescheduling.
+ */
+export const getUpcomingIncompleteActivities = async () => {
+    const db = await getDb();
+    const now = new Date().toISOString();
+    return await db.getAllAsync<ActivityHistory & { name: string }>(
+        `SELECT h.*, a.name 
+         FROM activity_history h 
+         JOIN activities a ON h.activity_id = a.id 
+         WHERE h.scheduled_date > ? AND h.completed = 0`,
+        [now]
+    );
+};
+
+/**
+ * Cancel all currently scheduled notifications and re-create them 
+ * based on current user preferences (new time, enabled status).
+ */
+export const rescheduleAllNotifications = async () => {
+    const db = await getDb();
+
+    // 1. Cancel everything at the system level
+    await NotificationService.cancelAllScheduledNotifications();
+
+    // 2. Fetch all future incomplete activities
+    const upcoming = await getUpcomingIncompleteActivities();
+
+    // 3. Clear all old notification IDs from the DB and reschedule
+    for (const item of upcoming) {
+        const newNotificationId = await NotificationService.scheduleActivityReminder(
+            item.id,
+            item.name,
+            item.scheduled_date
+        );
+
+        await db.runAsync(
+            `UPDATE activity_history SET notification_id = ? WHERE id = ?`,
+            [newNotificationId || null, item.id]
+        );
+    }
+
+    return true;
 };
 
 export const removeScheduledActivity = async (historyId: number) => {
@@ -465,7 +506,7 @@ export const getMonthlyScheduledActivities = async (year: number, month: number)
     const endStr = normalizeDate(endOfMonth);
 
     const historyItems = await db.getAllAsync<ActivityHistory & Activity>(
-        `SELECT h.*, a.*
+        `SELECT a.*, h.*, h.id as id
          FROM activity_history h 
          JOIN activities a ON h.activity_id = a.id 
          WHERE h.scheduled_date BETWEEN ? AND ? 

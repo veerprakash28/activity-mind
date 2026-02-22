@@ -4,7 +4,7 @@ import { Calendar } from 'react-native-calendars';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
-import { getDb, ActivityHistory, Activity, markCompleted, unmarkCompleted, removeScheduledActivity, getMonthlyScheduledActivities } from '../database/database';
+import { getDb, ActivityHistory, Activity, markCompleted, unmarkCompleted, removeScheduledActivity, getMonthlyScheduledActivities, saveHistory } from '../database/database';
 import { ActivityCard } from '../components/ActivityCard';
 import { ActivityDetailModal } from '../components/ActivityDetailModal';
 import { Button } from '../components/Button';
@@ -89,7 +89,11 @@ export const CalendarScreen = ({ route }: any) => {
         setStatusMessage(`Did you finish "${item.name}"? This will boost your engagement score!`);
         setStatusConfirmLabel('Yes, Completed!');
         setOnStatusConfirm(() => async () => {
-            await markCompleted(item.id, 5, "Great activity!");
+            let targetId = item.id;
+            if (targetId < 0) {
+                targetId = await saveHistory(item.activity_id, item.scheduled_date);
+            }
+            await markCompleted(targetId, 5, "Great activity!");
             await loadHistory();
         });
         setStatusVisible(true);
@@ -108,6 +112,16 @@ export const CalendarScreen = ({ route }: any) => {
     };
 
     const handleRemoveScheduled = (item: ActivityHistory & Activity) => {
+        if (item.id < 0) {
+            setStatusType('info');
+            setStatusTitle('Recurring Activity');
+            setStatusMessage(`This is a default weekly activity for your team.\nYou can mark it Complete instead!`);
+            setStatusConfirmLabel('Got It');
+            setOnStatusConfirm(() => () => { });
+            setStatusVisible(true);
+            return;
+        }
+
         setStatusType('confirm');
         setStatusTitle('Remove Activity');
         setStatusMessage(`Remove "${item.name}" from your schedule?`);
