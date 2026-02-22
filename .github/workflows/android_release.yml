@@ -31,6 +31,23 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
+      - name: 🏷️ Sync version from Tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          echo "Syncing internal version to $VERSION"
+          
+          # Update package.json
+          sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
+          
+          # Update app.json version
+          sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" app.json
+          
+          # Increment versionCode (generates a unique int based on version parts)
+          # Example: 1.0.5 -> 10005
+          V_CODE=$(echo $VERSION | awk -F. '{printf "%d%02d%02d", $1, $2, $3}')
+          sed -i "s/\"versionCode\": [0-9]*/\"versionCode\": $V_CODE/" app.json
+
       - name: 🏗 Prebuild Android
         run: npx expo prebuild --platform android
 

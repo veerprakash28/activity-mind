@@ -2,7 +2,7 @@
   "expo": {
     "name": "Activity Mind",
     "slug": "activity-mind",
-    "version": "1.0.0",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -23,7 +23,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.veerprakash28.activitymind"
+      "package": "com.veerprakash28.activitymind",
+      "versionCode": 5
     },
     "web": {
       "favicon": "./assets/favicon.png"
