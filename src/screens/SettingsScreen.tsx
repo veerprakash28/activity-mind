@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, Alert, TouchableOpacity, Switch, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAppContext } from '../context/AppContext';
 import { Button } from '../components/Button';
 import { FilterChip } from '../components/FilterChip';
@@ -27,8 +28,17 @@ const COLOR_PRESETS = [
 
 const isValidHex = (hex: string) => /^#([0-9A-Fa-f]{6})$/.test(hex);
 
+const formatTime12h = (time24: string) => {
+    if (!time24) return '09:00 AM';
+    const [h, m] = time24.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    const mStr = m.toString().padStart(2, '0');
+    return `${h12}:${mStr} ${ampm}`;
+};
+
 export const SettingsScreen = ({ navigation }: any) => {
-    const { theme, preferences, setThemePreference, setGenerationCount, setMonthlyTarget, setRemindersEnabled, organization, setOrganization, customColors, setCustomColors, categories, renameCategory, updateInfo, checkUpdate } = useAppContext();
+    const { theme, preferences, setThemePreference, setGenerationCount, setMonthlyTarget, setRemindersEnabled, setReminderTime, organization, setOrganization, customColors, setCustomColors, categories, renameCategory, updateInfo, checkUpdate } = useAppContext();
 
     const [activeTab, setActiveTab] = useState<'org' | 'theme'>('org');
 
@@ -61,6 +71,9 @@ export const SettingsScreen = ({ navigation }: any) => {
 
     // Update state (modal visibility only, data from context)
     const [updateModalVisible, setUpdateModalVisible] = useState(false);
+
+    // Time picker state
+    const [showTimePicker, setShowTimePicker] = useState(false);
 
     useFocusEffect(
         React.useCallback(() => {
@@ -330,6 +343,49 @@ export const SettingsScreen = ({ navigation }: any) => {
                         thumbColor={Platform.OS === 'ios' ? undefined : (preferences.remindersEnabled ? '#FFF' : '#f4f3f4')}
                     />
                 </View>
+
+                {preferences.remindersEnabled && (
+                    <TouchableOpacity
+                        onPress={() => setShowTimePicker(true)}
+                        style={[styles.timeRow, { marginTop: 16, borderTopWidth: 1, borderTopColor: theme.colors.border + '40', paddingTop: 16, width: '100%' }]}
+                    >
+                        <View style={{ flex: 1, paddingRight: 12 }}>
+                            <Text style={[theme.typography.h4, { color: theme.colors.text }]}>Reminder Time</Text>
+                            <Text style={[theme.typography.body2, { color: theme.colors.textSecondary, marginTop: 2 }]} numberOfLines={2}>
+                                You will be nudged at this time on the day of the activity.
+                            </Text>
+                        </View>
+                        <View style={[styles.timeBadge, { backgroundColor: theme.colors.primaryLight, flexShrink: 0 }]}>
+                            <Text style={[theme.typography.body1, { color: theme.colors.primary, fontWeight: '700' }]}>
+                                {formatTime12h(preferences.reminderTime)}
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
+                )}
+
+                {showTimePicker && (
+                    <DateTimePicker
+                        value={(() => {
+                            const [h, m] = (preferences.reminderTime || '09:00').split(':').map(Number);
+                            const d = new Date();
+                            d.setHours(h, m, 0, 0);
+                            return d;
+                        })()}
+                        mode="time"
+                        is24Hour={false}
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={(event, date) => {
+                            setShowTimePicker(Platform.OS === 'ios');
+                            if (date && (event.type === 'set' || Platform.OS === 'ios')) {
+                                const hours = date.getHours().toString().padStart(2, '0');
+                                const minutes = date.getMinutes().toString().padStart(2, '0');
+                                const timeString = `${hours}:${minutes}`;
+                                setReminderTime(timeString);
+                                NotificationService.setReminderTime(timeString);
+                            }
+                        }}
+                    />
+                )}
             </View>
 
             <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
@@ -576,5 +632,15 @@ const styles = StyleSheet.create({
     updateIcon: {
         width: 36, height: 36, borderRadius: 12,
         alignItems: 'center', justifyContent: 'center',
+    },
+    timeRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    timeBadge: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 10,
     },
 });

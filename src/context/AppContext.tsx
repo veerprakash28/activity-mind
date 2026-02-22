@@ -19,6 +19,7 @@ interface Preferences {
     generationCount: number;
     monthlyTarget: number;
     remindersEnabled: boolean;
+    reminderTime: string;
 }
 
 interface AppContextData {
@@ -30,6 +31,7 @@ interface AppContextData {
     setGenerationCount: (count: number) => Promise<void>;
     setMonthlyTarget: (target: number) => Promise<void>;
     setRemindersEnabled: (enabled: boolean) => Promise<void>;
+    setReminderTime: (time: string) => Promise<void>;
 
     // Custom Colors
     customColors: CustomColors;
@@ -70,7 +72,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         isPro: false,
         generationCount: 3,
         monthlyTarget: 2,
-        remindersEnabled: true
+        remindersEnabled: true,
+        reminderTime: '09:00'
     });
     const [organization, setOrganizationState] = useState<Organization | null>(null);
     const [isFirstLaunch, setIsFirstLaunchState] = useState<boolean>(true);
@@ -90,7 +93,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     AsyncStorage.getItem(CUSTOM_COLORS_KEY),
                 ]);
 
-                if (prefsJson) setPreferences(JSON.parse(prefsJson));
+                if (prefsJson) {
+                    const loadedPrefs = JSON.parse(prefsJson);
+                    setPreferences(prev => ({ ...prev, ...loadedPrefs }));
+                }
                 if (orgJson) setOrganizationState(JSON.parse(orgJson));
                 if (firstLaunchStr === 'false') setIsFirstLaunchState(false);
                 if (colorsJson) setCustomColorsState(JSON.parse(colorsJson));
@@ -128,6 +134,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     const setRemindersEnabled = async (enabled: boolean) => {
         const newPrefs = { ...preferences, remindersEnabled: enabled };
+        setPreferences(newPrefs);
+        await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(newPrefs));
+    };
+
+    const setReminderTime = async (time: string) => {
+        const newPrefs = { ...preferences, reminderTime: time };
         setPreferences(newPrefs);
         await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(newPrefs));
     };
@@ -201,6 +213,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 setGenerationCount,
                 setMonthlyTarget,
                 setRemindersEnabled,
+                setReminderTime,
                 updateInfo,
                 checkUpdate
             }}

@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 // Configure notification behavior
 // Internal state to respect user preferences
 let _enabled = true;
+let _reminderTime = '09:00';
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -27,6 +28,13 @@ export const NotificationService = {
      * Check if notifications are globally enabled
      */
     isEnabled: () => _enabled,
+
+    /**
+     * Set the global preferred reminder time
+     */
+    setReminderTime: (time: string) => {
+        _reminderTime = time || '09:00';
+    },
 
     /**
      * Request notification permissions from the user
@@ -53,13 +61,14 @@ export const NotificationService = {
 
         const scheduledDate = new Date(dateString);
 
-        // Target time is 30 minutes before the scheduled time
-        // Note: Scheduled activities are normalized to 12:00 PM local time to prevent drift
-        const triggerDate = new Date(scheduledDate.getTime() - 30 * 60000);
-        const now = new Date();
+        // Calculate trigger time based on preferred reminder time (safety fallback to 9AM)
+        const [hours, minutes] = (_reminderTime || '09:00').split(':').map(Number);
+        const triggerDate = new Date(scheduledDate);
+        triggerDate.setHours(hours, minutes, 0, 0);
 
-        if (triggerDate <= now) {
-            console.log(`[NotificationService] Activity "${activityName}" is too soon (${triggerDate.toLocaleString()}), skipping reminder.`);
+        // If normalized date is 12PM but user wants 9AM, we just set it.
+        // Safety: If trigger time is in the past, don't schedule
+        if (triggerDate <= new Date()) {
             return null;
         }
 

@@ -19,7 +19,10 @@ const MainApp = () => {
       try {
         await initDb();
         await refreshCategories(); // Sync categories once tables are created
-        NotificationService.setEnabled(preferences.remindersEnabled); // Setup initial state
+        if (preferences) {
+          NotificationService.setEnabled(preferences.remindersEnabled ?? true); // Setup initial state
+          NotificationService.setReminderTime(preferences.reminderTime || '09:00'); // Setup initial timing
+        }
         await NotificationService.requestPermissions(); // Request for Smart Reminders
         setDbReady(true);
       } catch (e) {
