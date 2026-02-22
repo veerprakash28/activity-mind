@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
@@ -9,6 +9,7 @@ import { Button } from '../components/Button';
 import { ActivityCard } from '../components/ActivityCard';
 import { ActivityDetailModal } from '../components/ActivityDetailModal';
 import { getActivityStats, getUpcomingActivity, Activity, ActivityHistory, getDb, normalizeDate } from '../database/database';
+import { VersionService } from '../utils/VersionService';
 
 export const HomeScreen = () => {
     const { theme, organization, preferences, categories: dynamicCategories } = useAppContext();
@@ -28,8 +29,8 @@ export const HomeScreen = () => {
             const db = await getDb();
             const now = normalizeDate(new Date());
             const next = await db.getFirstAsync<Activity & ActivityHistory>(
-                `SELECT h.id as historyId, h.scheduled_date, h.completed, a.* 
-                 FROM activity_history h 
+                `SELECT h.id as historyId, h.scheduled_date, h.completed, a.*
+    FROM activity_history h 
                  JOIN activities a ON h.activity_id = a.id 
                  WHERE h.scheduled_date >= ? AND h.completed = 0 
                  ORDER BY h.scheduled_date ASC LIMIT 1`,
@@ -44,6 +45,26 @@ export const HomeScreen = () => {
     useFocusEffect(
         useCallback(() => {
             loadData();
+
+            // Check for updates periodically
+            const checkUpdate = async () => {
+                const info = await VersionService.checkForUpdates();
+                if (info?.hasUpdate) {
+                    Alert.alert(
+                        "Update Available!",
+                        `A newer version(${info.latestVersion}) is available on GitHub.You are on ${info.currentVersion}.\n\n` +
+                        "Updating ensures you have the latest activities and stability fixes.",
+                        [
+                            { text: "Later", style: "cancel" },
+                            {
+                                text: "Download Now",
+                                onPress: () => VersionService.openDownloadPage(info.downloadUrl)
+                            }
+                        ]
+                    );
+                }
+            };
+            checkUpdate();
         }, [])
     );
 
