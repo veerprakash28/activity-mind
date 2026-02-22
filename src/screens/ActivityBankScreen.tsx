@@ -8,6 +8,7 @@ import { ActivityCard } from '../components/ActivityCard';
 import { ActivityDetailModal } from '../components/ActivityDetailModal';
 import { FilterChip } from '../components/FilterChip';
 import { Button } from '../components/Button';
+import { StatusModal, StatusType } from '../components/StatusModal';
 
 export const ActivityBankScreen = ({ navigation }: any) => {
     const { theme, categories } = useAppContext();
@@ -17,6 +18,14 @@ export const ActivityBankScreen = ({ navigation }: any) => {
     const [activeTab, setActiveTab] = useState<'built-in' | 'custom'>('built-in');
     const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
+
+    // Status Modal State
+    const [statusVisible, setStatusVisible] = useState(false);
+    const [statusType, setStatusType] = useState<StatusType>('confirm');
+    const [statusTitle, setStatusTitle] = useState('');
+    const [statusMessage, setStatusMessage] = useState('');
+    const [statusConfirmLabel, setStatusConfirmLabel] = useState('Delete');
+    const [onStatusConfirm, setOnStatusConfirm] = useState<(() => void) | undefined>(undefined);
 
     const loadActivities = async () => {
         try {
@@ -34,21 +43,15 @@ export const ActivityBankScreen = ({ navigation }: any) => {
     );
 
     const handleDelete = (activity: Activity) => {
-        Alert.alert(
-            "Delete Activity",
-            `Are you sure you want to delete "${activity.name}"?`,
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                        await deleteActivity(activity.id);
-                        loadActivities();
-                    }
-                }
-            ]
-        );
+        setStatusType('confirm');
+        setStatusTitle('Delete Activity');
+        setStatusMessage(`Are you sure you want to delete "${activity.name}"? This action cannot be undone.`);
+        setStatusConfirmLabel('Delete');
+        setOnStatusConfirm(() => async () => {
+            await deleteActivity(activity.id);
+            loadActivities();
+        });
+        setStatusVisible(true);
     };
 
     const builtInActivities = activities.filter(a => a.is_custom === 0);
@@ -198,13 +201,26 @@ export const ActivityBankScreen = ({ navigation }: any) => {
                             icon={<MaterialCommunityIcons name="trash-can-outline" size={18} color={theme.colors.error} />}
                             onPress={() => {
                                 setModalVisible(false);
-                                handleDelete(selectedActivity);
+                                // Ensure selectedActivity is not null before passing to handleDelete
+                                if (selectedActivity) {
+                                    handleDelete(selectedActivity);
+                                }
                             }}
                             style={{ flex: 1, borderColor: theme.colors.error }}
                             size="small"
                         />
                     </>
                 ) : undefined}
+            />
+
+            <StatusModal
+                visible={statusVisible}
+                type={statusType}
+                title={statusTitle}
+                message={statusMessage}
+                confirmLabel={statusConfirmLabel}
+                onConfirm={onStatusConfirm}
+                onClose={() => setStatusVisible(false)}
             />
         </View>
     );

@@ -7,6 +7,7 @@ import { Button } from '../components/Button';
 import { FilterChip } from '../components/FilterChip';
 import { ActivityCard } from '../components/ActivityCard';
 import { ActivityDetailModal } from '../components/ActivityDetailModal';
+import { StatusModal, StatusType } from '../components/StatusModal';
 import { generateActivities, FilterParams, SmartEngineResult } from '../database/smartEngine';
 import { saveHistory, toggleFavorite, isFavorite, Activity, normalizeDate } from '../database/database';
 
@@ -36,6 +37,13 @@ export const GenerateScreen = ({ route, navigation }: any) => {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [schedulingActivity, setSchedulingActivity] = useState<Activity | null>(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
+
+    // Status Modal State
+    const [statusVisible, setStatusVisible] = useState(false);
+    const [statusType, setStatusType] = useState<StatusType>('success');
+    const [statusTitle, setStatusTitle] = useState('');
+    const [statusMessage, setStatusMessage] = useState('');
+    const [onStatusConfirm, setOnStatusConfirm] = useState<(() => void) | undefined>(undefined);
 
     // Handle navigation params
     React.useEffect(() => {
@@ -99,7 +107,10 @@ export const GenerateScreen = ({ route, navigation }: any) => {
             }
             setFavoriteMap(favMap);
         } catch (e) {
-            Alert.alert("Error", "Could not generate activities.");
+            setStatusType('error');
+            setStatusTitle('Error');
+            setStatusMessage('Could not generate activities. Please check your connection.');
+            setStatusVisible(true);
         } finally {
             setLoading(false);
             setIsRefreshing(false);
@@ -140,21 +151,24 @@ export const GenerateScreen = ({ route, navigation }: any) => {
                 return;
             }
         }
-        if (date && schedulingActivity) {
-            setSelectedDate(date);
-            if (Platform.OS === 'android' && event.type === 'set') {
-                // On Android, picker dismisses on selection
-                await saveHistory(schedulingActivity.id, date.toISOString());
-                Alert.alert("Scheduled!", `Activity added to ${date.toLocaleDateString()}.`);
-                setSchedulingActivity(null);
-            }
+        if (date && schedulingActivity && Platform.OS === 'android' && event.type === 'set') {
+            // On Android, picker dismisses on selection
+            await saveHistory(schedulingActivity.id, date.toISOString());
+            setStatusType('success');
+            setStatusTitle('Scheduled!');
+            setStatusMessage(`Activity added to ${date.toLocaleDateString()}.`);
+            setStatusVisible(true);
+            setSchedulingActivity(null);
         }
     };
 
     const confirmIOSDate = async () => {
         if (schedulingActivity) {
             await saveHistory(schedulingActivity.id, selectedDate.toISOString());
-            Alert.alert("Scheduled!", `Activity added to ${selectedDate.toLocaleDateString()}.`);
+            setStatusType('success');
+            setStatusTitle('Scheduled!');
+            setStatusMessage(`Activity added to ${selectedDate.toLocaleDateString()}.`);
+            setStatusVisible(true);
             setShowDatePicker(false);
             setSchedulingActivity(null);
         }
@@ -370,6 +384,15 @@ export const GenerateScreen = ({ route, navigation }: any) => {
                     )}
                 </View>
             )}
+
+            <StatusModal
+                visible={statusVisible}
+                type={statusType}
+                title={statusTitle}
+                message={statusMessage}
+                onConfirm={onStatusConfirm}
+                onClose={() => setStatusVisible(false)}
+            />
         </View>
     );
 };

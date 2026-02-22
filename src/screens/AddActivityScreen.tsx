@@ -5,6 +5,7 @@ import { useAppContext } from '../context/AppContext';
 import { addCustomActivity, updateActivity, Activity } from '../database/database';
 import { Button } from '../components/Button';
 import { FilterChip } from '../components/FilterChip';
+import { StatusModal, StatusType } from '../components/StatusModal';
 
 export const AddActivityScreen = ({ route, navigation }: any) => {
     const { theme, categories, refreshCategories } = useAppContext();
@@ -20,18 +21,30 @@ export const AddActivityScreen = ({ route, navigation }: any) => {
     const [difficulty, setDifficulty] = useState(editingActivity?.difficulty || 'Easy');
     const [prepTime, setPrepTime] = useState(editingActivity?.prep_time || 'None');
     const [remoteCompatible, setRemoteCompatible] = useState(editingActivity ? editingActivity.remote_compatible === 1 : true);
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
     const [saving, setSaving] = useState(false);
 
-    const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
-    const [newCategoryName, setNewCategoryName] = useState('');
+    // Status Modal State
+    const [statusVisible, setStatusVisible] = useState(false);
+    const [statusType, setStatusType] = useState<StatusType>('success');
+    const [statusTitle, setStatusTitle] = useState('');
+    const [statusMessage, setStatusMessage] = useState('');
+    const [onStatusConfirm, setOnStatusConfirm] = useState<(() => void) | undefined>(undefined);
 
     const handleSave = async () => {
         if (!name.trim()) {
-            Alert.alert("Required", "Please enter an activity name.");
+            setStatusType('error');
+            setStatusTitle('Required');
+            setStatusMessage('Please enter an activity name.');
+            setStatusVisible(true);
             return;
         }
         if (!description.trim()) {
-            Alert.alert("Required", "Please enter a description.");
+            setStatusType('error');
+            setStatusTitle('Required');
+            setStatusMessage('Please enter a description.');
+            setStatusVisible(true);
             return;
         }
 
@@ -48,7 +61,10 @@ export const AddActivityScreen = ({ route, navigation }: any) => {
             const finalCategory = toTitleCase(rawCategory);
 
             if (showNewCategoryInput && !newCategoryName.trim()) {
-                Alert.alert("Required", "Please enter a new category name.");
+                setStatusType('error');
+                setStatusTitle('Required');
+                setStatusMessage('Please enter a new category name.');
+                setStatusVisible(true);
                 setSaving(false);
                 return;
             }
@@ -86,13 +102,16 @@ export const AddActivityScreen = ({ route, navigation }: any) => {
 
             await refreshCategories();
 
-            Alert.alert(
-                editingActivity ? "Updated!" : "Saved!",
-                editingActivity ? "Activity changes have been saved." : "Your custom activity has been added to the bank.",
-                [{ text: "OK", onPress: () => navigation.goBack() }]
-            );
+            setStatusType('success');
+            setStatusTitle(editingActivity ? "Updated!" : "Saved!");
+            setStatusMessage(editingActivity ? "Activity changes have been saved." : "Your custom activity has been added to the bank.");
+            setOnStatusConfirm(() => () => navigation.goBack());
+            setStatusVisible(true);
         } catch (e) {
-            Alert.alert("Error", "Failed to save activity.");
+            setStatusType('error');
+            setStatusTitle('Error');
+            setStatusMessage('Failed to save activity.');
+            setStatusVisible(true);
         } finally {
             setSaving(false);
         }
@@ -229,6 +248,16 @@ export const AddActivityScreen = ({ route, navigation }: any) => {
 
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            <StatusModal
+                visible={statusVisible}
+                type={statusType}
+                title={statusTitle}
+                message={statusMessage}
+                onConfirm={onStatusConfirm}
+                onClose={() => setStatusVisible(false)}
+                confirmLabel={statusType === 'success' ? "Proceed" : "Try Again"}
+            />
         </View>
     );
 };

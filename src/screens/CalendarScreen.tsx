@@ -4,10 +4,11 @@ import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
-import { getDb, ActivityHistory, Activity, markCompleted, unmarkCompleted } from '../database/database';
+import { getDb, ActivityHistory, Activity, markCompleted, unmarkCompleted, removeScheduledActivity } from '../database/database';
 import { ActivityCard } from '../components/ActivityCard';
 import { ActivityDetailModal } from '../components/ActivityDetailModal';
 import { Button } from '../components/Button';
+import { StatusModal, StatusType } from '../components/StatusModal';
 
 export const CalendarScreen = ({ route }: any) => {
     const { theme } = useAppContext();
@@ -18,6 +19,14 @@ export const CalendarScreen = ({ route }: any) => {
     const [markedDates, setMarkedDates] = useState<any>({});
     const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
+
+    // Status Modal State
+    const [statusVisible, setStatusVisible] = useState(false);
+    const [statusType, setStatusType] = useState<StatusType>('confirm');
+    const [statusTitle, setStatusTitle] = useState('');
+    const [statusMessage, setStatusMessage] = useState('');
+    const [statusConfirmLabel, setStatusConfirmLabel] = useState('Yes');
+    const [onStatusConfirm, setOnStatusConfirm] = useState<(() => void) | undefined>(undefined);
 
     const loadHistory = async () => {
         try {
@@ -61,57 +70,39 @@ export const CalendarScreen = ({ route }: any) => {
     };
 
     const handleMarkComplete = async (item: ActivityHistory & Activity) => {
-        Alert.alert(
-            "Mark as Completed",
-            `Did you finish "${item.name}"? This will boost your engagement score!`,
-            [
-                { text: "Not yet", style: "cancel" },
-                {
-                    text: "Yes, Completed!",
-                    onPress: async () => {
-                        await markCompleted(item.id, 5, "Great activity!");
-                        await loadHistory();
-                    }
-                }
-            ]
-        );
+        setStatusType('confirm');
+        setStatusTitle('Mark as Completed');
+        setStatusMessage(`Did you finish "${item.name}"? This will boost your engagement score!`);
+        setStatusConfirmLabel('Yes, Completed!');
+        setOnStatusConfirm(() => async () => {
+            await markCompleted(item.id, 5, "Great activity!");
+            await loadHistory();
+        });
+        setStatusVisible(true);
     };
 
     const handleUnmarkComplete = async (item: ActivityHistory & Activity) => {
-        Alert.alert(
-            "Undo Completion",
-            `Are you sure you want to mark "${item.name}" as not completed?`,
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Yes, Undo",
-                    style: "destructive",
-                    onPress: async () => {
-                        await unmarkCompleted(item.id);
-                        await loadHistory();
-                    }
-                }
-            ]
-        );
+        setStatusType('confirm');
+        setStatusTitle('Undo Completion');
+        setStatusMessage(`Are you sure you want to mark "${item.name}" as not completed?`);
+        setStatusConfirmLabel('Yes, Undo');
+        setOnStatusConfirm(() => async () => {
+            await unmarkCompleted(item.id);
+            await loadHistory();
+        });
+        setStatusVisible(true);
     };
 
     const handleRemoveScheduled = (item: ActivityHistory & Activity) => {
-        Alert.alert(
-            "Remove Scheduled Activity",
-            `Remove "${item.name}" from ${item.scheduled_date.split('T')[0]}?`,
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Remove",
-                    style: "destructive",
-                    onPress: async () => {
-                        const db = await getDb();
-                        await db.runAsync(`DELETE FROM activity_history WHERE id = ?`, [item.id]);
-                        await loadHistory();
-                    }
-                }
-            ]
-        );
+        setStatusType('confirm');
+        setStatusTitle('Remove Activity');
+        setStatusMessage(`Remove "${item.name}" from your schedule?`);
+        setStatusConfirmLabel('Remove');
+        setOnStatusConfirm(() => async () => {
+            await removeScheduledActivity(item.id);
+            await loadHistory();
+        });
+        setStatusVisible(true);
     };
 
     const selectedActivities = history.filter(h => h.scheduled_date.startsWith(selectedDate));
@@ -200,6 +191,16 @@ export const CalendarScreen = ({ route }: any) => {
                 activity={selectedActivity}
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
+            />
+
+            <StatusModal
+                visible={statusVisible}
+                type={statusType}
+                title={statusTitle}
+                message={statusMessage}
+                confirmLabel={statusConfirmLabel}
+                onConfirm={onStatusConfirm}
+                onClose={() => setStatusVisible(false)}
             />
         </View>
     );

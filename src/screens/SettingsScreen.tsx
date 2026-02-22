@@ -7,6 +7,8 @@ import { FilterChip } from '../components/FilterChip';
 import { VersionService, UpdateInfo } from '../utils/VersionService';
 import { UpdateModal } from '../components/UpdateModal';
 import { useFocusEffect } from '@react-navigation/native';
+import { StatusModal, StatusType } from '../components/StatusModal';
+import { NotificationService } from '../utils/NotificationService';
 
 const COLOR_PRESETS = [
     { label: 'Blue', value: '#2563EB' },
@@ -48,6 +50,14 @@ export const SettingsScreen = ({ navigation }: any) => {
     const [editingCategory, setEditingCategory] = useState<string | null>(null);
     const [newCategoryName, setNewCategoryName] = useState('');
     const [saving, setSaving] = useState(false);
+
+    // Status Modal State
+    const [statusVisible, setStatusVisible] = useState(false);
+    const [statusType, setStatusType] = useState<StatusType>('success');
+    const [statusTitle, setStatusTitle] = useState('');
+    const [statusMessage, setStatusMessage] = useState('');
+    const [statusConfirmLabel, setStatusConfirmLabel] = useState('OK');
+    const [onStatusConfirm, setOnStatusConfirm] = useState<(() => void) | undefined>(undefined);
 
     // Update state (modal visibility only, data from context)
     const [updateModalVisible, setUpdateModalVisible] = useState(false);
@@ -114,11 +124,17 @@ export const SettingsScreen = ({ navigation }: any) => {
         setSaving(true);
         try {
             await renameCategory(oldName, newCategoryName.trim());
-            Alert.alert("Success", `Category renamed to "${newCategoryName.trim()}"`);
+            setStatusType('success');
+            setStatusTitle('Success');
+            setStatusMessage(`Category renamed to "${newCategoryName.trim()}"`);
+            setStatusVisible(true);
             setEditingCategory(null);
             setNewCategoryName('');
         } catch (e) {
-            Alert.alert("Error", "Failed to rename category.");
+            setStatusType('error');
+            setStatusTitle('Error');
+            setStatusMessage('Failed to rename category.');
+            setStatusVisible(true);
         } finally {
             setSaving(false);
         }
@@ -126,7 +142,10 @@ export const SettingsScreen = ({ navigation }: any) => {
 
     const handleSaveOrg = async () => {
         if (!companyName.trim()) {
-            Alert.alert("Required", "Please enter your company name.");
+            setStatusType('error');
+            setStatusTitle('Required');
+            setStatusMessage('Please enter your company name.');
+            setStatusVisible(true);
             return;
         }
         setSaving(true);
@@ -141,9 +160,15 @@ export const SettingsScreen = ({ navigation }: any) => {
                 }),
                 setMonthlyTarget(monthlyTargetPref)
             ]);
-            Alert.alert("Saved!", "Organization profile and preferences updated.");
+            setStatusType('success');
+            setStatusTitle('Saved!');
+            setStatusMessage('Organization profile and preferences updated.');
+            setStatusVisible(true);
         } catch (e) {
-            Alert.alert("Error", "Failed to save changes.");
+            setStatusType('error');
+            setStatusTitle('Error');
+            setStatusMessage('Failed to save changes.');
+            setStatusVisible(true);
         } finally {
             setSaving(false);
         }
@@ -151,11 +176,17 @@ export const SettingsScreen = ({ navigation }: any) => {
 
     const handleSaveTheme = async () => {
         if (!isValidHex(selectedPrimary)) {
-            Alert.alert("Invalid Color", "Primary color must be a valid hex code (e.g. #2563EB).");
+            setStatusType('error');
+            setStatusTitle('Invalid Color');
+            setStatusMessage('Primary color must be a valid hex code (e.g. #2563EB).');
+            setStatusVisible(true);
             return;
         }
         if (!isValidHex(selectedSecondary)) {
-            Alert.alert("Invalid Color", "Secondary color must be a valid hex code (e.g. #7C3AED).");
+            setStatusType('error');
+            setStatusTitle('Invalid Color');
+            setStatusMessage('Secondary color must be a valid hex code (e.g. #7C3AED).');
+            setStatusVisible(true);
             return;
         }
         setSaving(true);
@@ -164,9 +195,15 @@ export const SettingsScreen = ({ navigation }: any) => {
                 setThemePreference(themeModePref),
                 setCustomColors({ primary: selectedPrimary, secondary: selectedSecondary })
             ]);
-            Alert.alert("Saved!", "Theme settings updated.");
+            setStatusType('success');
+            setStatusTitle('Saved!');
+            setStatusMessage('Theme settings updated.');
+            setStatusVisible(true);
         } catch (e) {
-            Alert.alert("Error", "Failed to save theme settings.");
+            setStatusType('error');
+            setStatusTitle('Error');
+            setStatusMessage('Failed to save theme settings.');
+            setStatusVisible(true);
         } finally {
             setSaving(false);
         }
@@ -273,44 +310,72 @@ export const SettingsScreen = ({ navigation }: any) => {
                     ))}
                 </View>
 
-                <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
-                    <Text style={[theme.typography.h4, { color: theme.colors.text }]}>Manage Categories</Text>
-                    <Text style={[theme.typography.body2, { color: theme.colors.textSecondary, marginTop: 4 }]}>
-                        Tap a category to rename it across all your activities.
-                    </Text>
+            </View>
 
-                    <View style={[styles.chipRow, { marginTop: 12, gap: 8 }]}>
-                        {categories.map(cat => (
-                            <View key={cat} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                {editingCategory === cat ? (
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.primary, paddingLeft: 10 }}>
-                                        <TextInput
-                                            style={[styles.smallInput, { color: theme.colors.text }]}
-                                            value={newCategoryName}
-                                            onChangeText={setNewCategoryName}
-                                            autoFocus
-                                            placeholder="New Name"
-                                            placeholderTextColor={theme.colors.textSecondary}
-                                        />
-                                        <TouchableOpacity onPress={() => handleRenameCategory(cat)} style={{ padding: 8 }}>
-                                            <MaterialCommunityIcons name="check" size={20} color={theme.colors.primary} />
-                                        </TouchableOpacity>
-                                        <TouchableOpacity onPress={() => setEditingCategory(null)} style={{ padding: 8 }}>
-                                            <MaterialCommunityIcons name="close" size={20} color={theme.colors.textSecondary} />
-                                        </TouchableOpacity>
-                                    </View>
-                                ) : (
-                                    <TouchableOpacity
-                                        onPress={() => { setEditingCategory(cat); setNewCategoryName(cat); }}
-                                        style={[styles.categoryTile, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-                                    >
-                                        <Text style={[theme.typography.body2, { color: theme.colors.text }]}>{cat}</Text>
-                                        <MaterialCommunityIcons name="pencil-outline" size={14} color={theme.colors.textSecondary} style={{ marginLeft: 6 }} />
+            <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
+                <Text style={[theme.typography.h4, { color: theme.colors.text }]}>Smart Reminders</Text>
+                <Text style={[theme.typography.body2, { color: theme.colors.textSecondary, marginTop: 4, marginBottom: 12 }]}>
+                    Get notified 30 minutes before your scheduled team activities.
+                </Text>
+                <Button
+                    title="Send Test Notification"
+                    variant="outline"
+                    icon={<MaterialCommunityIcons name="bell-ring-outline" size={18} color={theme.colors.primary} />}
+                    onPress={async () => {
+                        const success = await NotificationService.sendImmediateTestNotification();
+                        if (success) {
+                            setStatusType('success');
+                            setStatusTitle('Sent!');
+                            setStatusMessage('Check your notifications! If you didn\'t receive it, please check your app permissions.');
+                            setStatusVisible(true);
+                        } else {
+                            setStatusType('error');
+                            setStatusTitle('Failed');
+                            setStatusMessage('Could not send test notification. Please check app permissions in settings.');
+                            setStatusVisible(true);
+                        }
+                    }}
+                    size="small"
+                />
+            </View>
+
+            <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
+                <Text style={[theme.typography.h4, { color: theme.colors.text }]}>Manage Categories</Text>
+                <Text style={[theme.typography.body2, { color: theme.colors.textSecondary, marginTop: 4 }]}>
+                    Tap a category to rename it across all your activities.
+                </Text>
+
+                <View style={[styles.chipRow, { marginTop: 12, gap: 8 }]}>
+                    {categories.map(cat => (
+                        <View key={cat} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            {editingCategory === cat ? (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.primary, paddingLeft: 10 }}>
+                                    <TextInput
+                                        style={[styles.smallInput, { color: theme.colors.text }]}
+                                        value={newCategoryName}
+                                        onChangeText={setNewCategoryName}
+                                        autoFocus
+                                        placeholder="New Name"
+                                        placeholderTextColor={theme.colors.textSecondary}
+                                    />
+                                    <TouchableOpacity onPress={() => handleRenameCategory(cat)} style={{ padding: 8 }}>
+                                        <MaterialCommunityIcons name="check" size={20} color={theme.colors.primary} />
                                     </TouchableOpacity>
-                                )}
-                            </View>
-                        ))}
-                    </View>
+                                    <TouchableOpacity onPress={() => setEditingCategory(null)} style={{ padding: 8 }}>
+                                        <MaterialCommunityIcons name="close" size={20} color={theme.colors.textSecondary} />
+                                    </TouchableOpacity>
+                                </View>
+                            ) : (
+                                <TouchableOpacity
+                                    onPress={() => { setEditingCategory(cat); setNewCategoryName(cat); }}
+                                    style={[styles.categoryTile, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                                >
+                                    <Text style={[theme.typography.body2, { color: theme.colors.text }]}>{cat}</Text>
+                                    <MaterialCommunityIcons name="pencil-outline" size={14} color={theme.colors.textSecondary} style={{ marginLeft: 6 }} />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    ))}
                 </View>
             </View>
         </ScrollView>
@@ -435,6 +500,16 @@ export const SettingsScreen = ({ navigation }: any) => {
                 visible={updateModalVisible}
                 updateInfo={updateInfo}
                 onClose={() => setUpdateModalVisible(false)}
+            />
+
+            <StatusModal
+                visible={statusVisible}
+                type={statusType}
+                title={statusTitle}
+                message={statusMessage}
+                confirmLabel={statusConfirmLabel}
+                onConfirm={onStatusConfirm}
+                onClose={() => setStatusVisible(false)}
             />
         </View>
     );
