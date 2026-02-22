@@ -199,10 +199,10 @@ export const CalendarExportScreen = ({ navigation }: any) => {
             <g transform="translate(0, ${i * 140})">
                 <rect width="400" height="120" rx="20" fill="#FFFFFF" stroke="${aColor}30" stroke-width="1.5" />
                 <circle cx="50" cy="60" r="30" fill="${aColor}15" />
-                <text x="50" y="68" font-family="Arial, sans-serif" font-size="24" text-anchor="middle">${extractEmoji(acc.name) || '⭐'}</text>
-                <text x="100" y="45" font-family="Arial, sans-serif" font-size="20" font-weight="800" fill="#2D3748">${stripEmoji(acc.name)}</text>
-                <text x="380" y="45" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="${aColor}" text-anchor="end">${acc.display_date || ''}</text>
-                <text x="100" y="75" font-family="Arial, sans-serif" font-size="14" fill="#718096">${acc.description.substring(0, 120).replace(/[<>&"']/g, "")}...</text>
+                <text x="50" y="60" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" dominant-baseline="central">${extractEmoji(acc.name) || '⭐'}</text>
+                <text x="100" y="45" font-family="Arial, sans-serif" font-size="20" font-weight="800" fill="#2D3748" dominant-baseline="central">${stripEmoji(acc.name)}</text>
+                <text x="380" y="45" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="${aColor}" text-anchor="end" dominant-baseline="central">${acc.display_date || ''}</text>
+                <text x="100" y="75" font-family="Arial, sans-serif" font-size="14" fill="#718096" dominant-baseline="central">${acc.description.substring(0, 120).replace(/[<>&"']/g, "")}...</text>
             </g>`).join('')}
         </g>
     </g>
@@ -221,9 +221,9 @@ export const CalendarExportScreen = ({ navigation }: any) => {
         ${sortedGroupedActivities.slice(0, 5).map((acc, i) => `
         <g transform="translate(0, ${i * 105})">
             <rect x="0" y="0" width="8" height="85" fill="${aColor}" rx="4" />
-            <text x="25" y="25" font-family="Arial, sans-serif" font-size="24" font-weight="900" fill="#2D3748">${extractEmoji(acc.name) || ''} ${stripEmoji(acc.name)}</text>
-            <text x="25" y="50" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="${aColor}">${acc.display_date || ''}</text>
-            <text x="25" y="75" font-family="Arial, sans-serif" font-size="15" fill="#4A5568">${acc.description.substring(0, 80).replace(/[<>&"']/g, "")}...</text>
+            <text x="25" y="25" font-family="Arial, sans-serif" font-size="24" font-weight="900" fill="#2D3748" dominant-baseline="central">${extractEmoji(acc.name) || ''} ${stripEmoji(acc.name)}</text>
+            <text x="25" y="50" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="${aColor}" dominant-baseline="central">${acc.display_date || ''}</text>
+            <text x="25" y="75" font-family="Arial, sans-serif" font-size="15" fill="#4A5568" dominant-baseline="central">${acc.description.substring(0, 80).replace(/[<>&"']/g, "")}...</text>
         </g>`).join('')}
     </g>
 
@@ -260,9 +260,9 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                 const col = i % 3;
                 return `
         <g transform="translate(${col * 280}, ${row * 100})">
-            <text x="0" y="20" font-family="Arial, sans-serif" font-size="13" font-weight="800" fill="${aColor}">${acc.display_date || ''}</text>
-            <text x="0" y="45" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#1A202C">${extractEmoji(acc.name) || ''} ${stripEmoji(acc.name)}</text>
-            <text x="0" y="70" font-family="Arial, sans-serif" font-size="13" fill="#718096">${acc.description.substring(0, 55).replace(/[<>&"']/g, "")}...</text>
+            <text x="0" y="20" font-family="Arial, sans-serif" font-size="13" font-weight="800" fill="${aColor}" dominant-baseline="central">${acc.display_date || ''}</text>
+            <text x="0" y="45" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#1A202C" dominant-baseline="central">${extractEmoji(acc.name) || ''} ${stripEmoji(acc.name)}</text>
+            <text x="0" y="70" font-family="Arial, sans-serif" font-size="13" fill="#718096" dominant-baseline="central">${acc.description.substring(0, 55).replace(/[<>&"']/g, "")}...</text>
         </g>`;
             }).join('')}
     </g>
@@ -288,7 +288,7 @@ export const CalendarExportScreen = ({ navigation }: any) => {
 
         let gridSvg = '';
         days.forEach((day, i) => {
-            gridSvg += `<text x="${i * cellW + cellW / 2}" y="0" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#E53E3E" text-anchor="middle">${day}</text>`;
+            gridSvg += `<text x="${i * cellW + cellW / 2}" y="15" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#E53E3E" text-anchor="middle" dominant-baseline="central">${day}</text>`;
         });
 
         for (let i = 0; i < 42; i++) {
@@ -300,12 +300,12 @@ export const CalendarExportScreen = ({ navigation }: any) => {
             if (isCurrentMonth) {
                 const dayActivities = activityMap[dayNum];
                 gridSvg += `
-        <g transform="translate(${col * cellW}, ${row * cellH + 30})">
+        <g transform="translate(${col * cellW}, ${row * cellH + 45})">
             ${dayActivities && dayActivities.length > 0 ? `
             <circle cx="${cellW / 2}" cy="${cellH / 2}" r="${cellH / 2.5}" fill="#FFFFFF" stroke="#E8ECF1" stroke-width="1" />
-            <text x="${cellW / 2}" y="${cellH / 2 + 7}" font-family="Arial, sans-serif" font-size="${cellH / 2.5}" text-anchor="middle">${extractEmoji(dayActivities[0].name) || '⭐'}</text>
+            <text x="${cellW / 2}" y="${cellH / 2}" font-family="Arial, sans-serif" font-size="${cellH / 2.5}" text-anchor="middle" dominant-baseline="central">${extractEmoji(dayActivities[0].name) || '⭐'}</text>
             ` : `
-            <text x="${cellW / 2}" y="${cellH / 2 + 6}" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#2D3E50" text-anchor="middle">${dayNum}</text>
+            <text x="${cellW / 2}" y="${cellH / 2}" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#2D3E50" text-anchor="middle" dominant-baseline="central">${dayNum}</text>
             `}
         </g>`;
             }
@@ -408,11 +408,11 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                         const dayActivities = isCurrentMonth ? activityMap[dayNum] : null;
 
                         return (
-                            <View key={i} style={{ width: '14.28%', height: 60, alignItems: 'center', justifyContent: 'flex-start' }}>
+                            <View key={i} style={{ width: '14.28%', height: 60, alignItems: 'center', justifyContent: 'center' }}>
                                 {isCurrentMonth && (
                                     <>
                                         {dayActivities && dayActivities.length > 0 ? (
-                                            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E8ECF1', alignItems: 'center', justifyContent: 'center', marginTop: 4 }}>
+                                            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E8ECF1', alignItems: 'center', justifyContent: 'center' }}>
                                                 {extractEmoji(dayActivities[0].name) ? (
                                                     <Text style={{ fontSize: 22 }}>{extractEmoji(dayActivities[0].name)}</Text>
                                                 ) : (
@@ -420,7 +420,7 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                                                 )}
                                             </View>
                                         ) : (
-                                            <Text style={{ fontSize: 16, fontWeight: '700', color: '#2D3E50', marginTop: 8 }}>{dayNum}</Text>
+                                            <Text style={{ fontSize: 16, fontWeight: '700', color: '#2D3E50' }}>{dayNum}</Text>
                                         )}
                                     </>
                                 )}
