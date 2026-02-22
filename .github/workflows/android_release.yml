@@ -48,6 +48,17 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+          body: |
+            ## Activity Mind 🧠
+            *Your personal assistant for boosting team engagement and employee happiness!*
+
+            Activity Mind helps you brainstorm, plan, and schedule activities that bring your team closer together—whether remote, hybrid, or onsite.
+
+            ### 🚀 What's in this version?
+            This release includes the latest stability fixes, UI alignments, and performance improvements to make your engagement planning even smoother.
+            
+            ---
+            *Note: See the automated changelog below for specific technical updates.*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
