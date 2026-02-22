@@ -10,13 +10,14 @@ import { OnboardingNavigator } from './src/navigation/OnboardingNavigator';
 import { initDb } from './src/database/database';
 
 const MainApp = () => {
-  const { theme, themeMode, isFirstLaunch } = useAppContext();
+  const { theme, themeMode, isFirstLaunch, refreshCategories } = useAppContext();
   const [dbReady, setDbReady] = useState(false);
 
   useEffect(() => {
     const setup = async () => {
       try {
         await initDb();
+        await refreshCategories(); // Sync categories once tables are created
         setDbReady(true);
       } catch (e) {
         console.error("Database initialization failed", e);

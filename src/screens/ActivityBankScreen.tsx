@@ -7,6 +7,7 @@ import { getAllActivities, deleteActivity, Activity } from '../database/database
 import { ActivityCard } from '../components/ActivityCard';
 import { ActivityDetailModal } from '../components/ActivityDetailModal';
 import { FilterChip } from '../components/FilterChip';
+import { Button } from '../components/Button';
 
 export const ActivityBankScreen = ({ navigation }: any) => {
     const { theme, categories } = useAppContext();
@@ -133,13 +134,22 @@ export const ActivityBankScreen = ({ navigation }: any) => {
                     <View style={styles.cardWrapper}>
                         <ActivityCard activity={item} expanded={false} onPress={() => { setSelectedActivity(item); setModalVisible(true); }} />
                         {activeTab === 'custom' ? (
-                            <TouchableOpacity
-                                style={[styles.cardDeleteOverlay, { backgroundColor: theme.colors.error }]}
-                                onPress={() => handleDelete(item)}
-                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            >
-                                <MaterialCommunityIcons name="trash-can-outline" size={16} color={theme.colors.white} />
-                            </TouchableOpacity>
+                            <View style={styles.cardActionOverlay}>
+                                <TouchableOpacity
+                                    style={[styles.cardActionButton, { backgroundColor: theme.colors.primary }]}
+                                    onPress={() => navigation.navigate('AddActivity', { activity: item })}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
+                                    <MaterialCommunityIcons name="pencil-outline" size={16} color={theme.colors.white} />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.cardActionButton, { backgroundColor: theme.colors.error }]}
+                                    onPress={() => handleDelete(item)}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
+                                    <MaterialCommunityIcons name="trash-can-outline" size={16} color={theme.colors.white} />
+                                </TouchableOpacity>
+                            </View>
                         ) : null}
                     </View>
                 )}
@@ -169,6 +179,32 @@ export const ActivityBankScreen = ({ navigation }: any) => {
                 activity={selectedActivity}
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
+                actions={selectedActivity?.is_custom ? (
+                    <>
+                        <Button
+                            title="Edit Details"
+                            variant="outline"
+                            icon={<MaterialCommunityIcons name="pencil-outline" size={18} color={theme.colors.primary} />}
+                            onPress={() => {
+                                setModalVisible(false);
+                                navigation.navigate('AddActivity', { activity: selectedActivity });
+                            }}
+                            style={{ flex: 1 }}
+                            size="small"
+                        />
+                        <Button
+                            title="Delete"
+                            variant="outline"
+                            icon={<MaterialCommunityIcons name="trash-can-outline" size={18} color={theme.colors.error} />}
+                            onPress={() => {
+                                setModalVisible(false);
+                                handleDelete(selectedActivity);
+                            }}
+                            style={{ flex: 1, borderColor: theme.colors.error }}
+                            size="small"
+                        />
+                    </>
+                ) : undefined}
             />
         </View>
     );
@@ -196,10 +232,14 @@ const styles = StyleSheet.create({
     },
     listContent: { padding: 16, paddingBottom: 80 },
     cardWrapper: { marginBottom: 16, position: 'relative' },
-    cardDeleteOverlay: {
+    cardActionOverlay: {
         position: 'absolute', bottom: 26, right: 10,
+        flexDirection: 'row', gap: 8,
+    },
+    cardActionButton: {
         width: 32, height: 32, borderRadius: 16,
         alignItems: 'center', justifyContent: 'center',
+        elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 1.41,
     },
     emptyState: { alignItems: 'center', paddingTop: 60 },
     fab: {

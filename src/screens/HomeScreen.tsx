@@ -24,11 +24,16 @@ export const HomeScreen = () => {
             const fetchedStats = await getActivityStats();
             setStats(fetchedStats);
 
-            // Fetch upcoming with all activity fields
+            // Fetch upcoming with all activity fields (explicit select to avoid name collisions)
             const db = await getDb();
+            const now = new Date().toISOString();
             const next = await db.getFirstAsync<Activity & ActivityHistory>(
-                `SELECT h.*, a.* FROM activity_history h JOIN activities a ON h.activity_id = a.id WHERE h.scheduled_date >= ? AND h.completed = 0 ORDER BY h.scheduled_date ASC LIMIT 1`,
-                [new Date().toISOString()]
+                `SELECT h.id as historyId, h.scheduled_date, h.completed, a.* 
+                 FROM activity_history h 
+                 JOIN activities a ON h.activity_id = a.id 
+                 WHERE h.scheduled_date >= ? AND h.completed = 0 
+                 ORDER BY h.scheduled_date ASC LIMIT 1`,
+                [now]
             );
             setUpcoming(next ?? null);
         } catch (e) {

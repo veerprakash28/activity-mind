@@ -97,6 +97,18 @@ export const initDb = async () => {
     );
   `);
 
+    // Migration logic for existing tables
+    try {
+        const tableInfo = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(activities)`);
+        const hasIsCustom = tableInfo.some(col => col.name === 'is_custom');
+        if (!hasIsCustom) {
+            console.log("Migration: Adding is_custom column to activities table...");
+            await db.execAsync(`ALTER TABLE activities ADD COLUMN is_custom INTEGER DEFAULT 0;`);
+        }
+    } catch (e) {
+        console.error("Migration failed", e);
+    }
+
     // Check if we need to seed data (seed if empty or bank has grown)
     const result = await db.getFirstAsync<{ count: number }>(`SELECT COUNT(*) as count FROM activities WHERE is_custom = 0`);
     const builtInCount = result?.count || 0;
@@ -165,9 +177,14 @@ export const getAllActivities = async () => {
 };
 
 export const getUniqueCategories = async () => {
-    const db = await getDb();
-    const result = await db.getAllAsync<{ category: string }>(`SELECT DISTINCT category FROM activities ORDER BY category ASC`);
-    return result.map(r => r.category);
+    try {
+        const db = await getDb();
+        const result = await db.getAllAsync<{ category: string }>(`SELECT DISTINCT category FROM activities ORDER BY category ASC`);
+        return result.map(r => r.category);
+    } catch (e) {
+        console.log("Categories not ready yet (table might be missing)");
+        return [];
+    }
 };
 
 // Get recent history (for 30 day checks and dashboard)
@@ -321,6 +338,34 @@ export const addCustomActivity = async (activity: {
     return result.lastInsertRowId;
 };
 
+export const updateActivity = async (id: number, activity: Partial<Activity>) => {
+    const db = await getDb();
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (activity.name) { fields.push('name = ?'); values.push(activity.name); }
+    if (activity.description) { fields.push('description = ?'); values.push(activity.description); }
+    if (activity.category) { fields.push('category = ?'); values.push(activity.category); }
+    if (activity.steps) { fields.push('steps = ?'); values.push(activity.steps); }
+    if (activity.materials) { fields.push('materials = ?'); values.push(activity.materials); }
+    if (activity.estimated_cost) { fields.push('estimated_cost = ?'); values.push(activity.estimated_cost); }
+    if (activity.duration) { fields.push('duration = ?'); values.push(activity.duration); }
+    if (activity.difficulty) { fields.push('difficulty = ?'); values.push(activity.difficulty); }
+    if (activity.prep_time) { fields.push('prep_time = ?'); values.push(activity.prep_time); }
+    if (activity.min_employees !== undefined) { fields.push('min_employees = ?'); values.push(activity.min_employees); }
+    if (activity.max_employees !== undefined) { fields.push('max_employees = ?'); values.push(activity.max_employees); }
+    if (activity.indoor_outdoor) { fields.push('indoor_outdoor = ?'); values.push(activity.indoor_outdoor); }
+    if (activity.remote_compatible !== undefined) { fields.push('remote_compatible = ?'); values.push(activity.remote_compatible); }
+
+    if (fields.length === 0) return;
+
+    values.push(id);
+    await db.runAsync(
+        `UPDATE activities SET ${fields.join(', ')} WHERE id = ?`,
+        values
+    );
+};
+
 export const deleteActivity = async (activityId: number) => {
     const db = await getDb();
     // Also clean up related records
@@ -328,4 +373,9 @@ export const deleteActivity = async (activityId: number) => {
     await db.runAsync(`DELETE FROM activity_history WHERE activity_id = ?`, [activityId]);
     await db.runAsync(`DELETE FROM generation_log WHERE activity_id = ?`, [activityId]);
     await db.runAsync(`DELETE FROM activities WHERE id = ?`, [activityId]);
+};
+
+export const renameCategory = async (oldName: string, newName: string) => {
+    const db = await getDb();
+    await db.runAsync(`UPDATE activities SET category = ? WHERE category = ?`, [newName, oldName]);
 };

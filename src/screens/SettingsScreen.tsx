@@ -23,7 +23,7 @@ const COLOR_PRESETS = [
 const isValidHex = (hex: string) => /^#([0-9A-Fa-f]{6})$/.test(hex);
 
 export const SettingsScreen = ({ navigation }: any) => {
-    const { theme, preferences, setThemePreference, setGenerationCount, setMonthlyTarget, organization, setOrganization, customColors, setCustomColors } = useAppContext();
+    const { theme, preferences, setThemePreference, setGenerationCount, setMonthlyTarget, organization, setOrganization, customColors, setCustomColors, categories, renameCategory } = useAppContext();
 
     const [activeTab, setActiveTab] = useState<'org' | 'theme'>('org');
 
@@ -42,6 +42,8 @@ export const SettingsScreen = ({ navigation }: any) => {
     const [secondaryHex, setSecondaryHex] = useState(customColors.secondary || '#7C3AED');
     const [monthlyTargetPref, setMonthlyTargetPref] = useState(preferences.monthlyTarget || 2);
 
+    const [editingCategory, setEditingCategory] = useState<string | null>(null);
+    const [newCategoryName, setNewCategoryName] = useState('');
     const [saving, setSaving] = useState(false);
 
     // Detect unsaved changes
@@ -89,6 +91,25 @@ export const SettingsScreen = ({ navigation }: any) => {
     const selectSecondaryPreset = (color: string) => {
         setSelectedSecondary(color);
         setSecondaryHex(color);
+    };
+
+    const handleRenameCategory = async (oldName: string) => {
+        if (!newCategoryName.trim() || newCategoryName.trim() === oldName) {
+            setEditingCategory(null);
+            return;
+        }
+
+        setSaving(true);
+        try {
+            await renameCategory(oldName, newCategoryName.trim());
+            Alert.alert("Success", `Category renamed to "${newCategoryName.trim()}"`);
+            setEditingCategory(null);
+            setNewCategoryName('');
+        } catch (e) {
+            Alert.alert("Error", "Failed to rename category.");
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleSaveOrg = async () => {
@@ -221,6 +242,46 @@ export const SettingsScreen = ({ navigation }: any) => {
                             onPress={() => setMonthlyTargetPref(num)}
                         />
                     ))}
+                </View>
+
+                <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
+                    <Text style={[theme.typography.h4, { color: theme.colors.text }]}>Manage Categories</Text>
+                    <Text style={[theme.typography.body2, { color: theme.colors.textSecondary, marginTop: 4 }]}>
+                        Tap a category to rename it across all your activities.
+                    </Text>
+
+                    <View style={[styles.chipRow, { marginTop: 12, gap: 8 }]}>
+                        {categories.map(cat => (
+                            <View key={cat} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                {editingCategory === cat ? (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.primary, paddingLeft: 10 }}>
+                                        <TextInput
+                                            style={[styles.smallInput, { color: theme.colors.text }]}
+                                            value={newCategoryName}
+                                            onChangeText={setNewCategoryName}
+                                            autoFocus
+                                            placeholder="New Name"
+                                            placeholderTextColor={theme.colors.textSecondary}
+                                        />
+                                        <TouchableOpacity onPress={() => handleRenameCategory(cat)} style={{ padding: 8 }}>
+                                            <MaterialCommunityIcons name="check" size={20} color={theme.colors.primary} />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={() => setEditingCategory(null)} style={{ padding: 8 }}>
+                                            <MaterialCommunityIcons name="close" size={20} color={theme.colors.textSecondary} />
+                                        </TouchableOpacity>
+                                    </View>
+                                ) : (
+                                    <TouchableOpacity
+                                        onPress={() => { setEditingCategory(cat); setNewCategoryName(cat); }}
+                                        style={[styles.categoryTile, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                                    >
+                                        <Text style={[theme.typography.body2, { color: theme.colors.text }]}>{cat}</Text>
+                                        <MaterialCommunityIcons name="pencil-outline" size={14} color={theme.colors.textSecondary} style={{ marginLeft: 6 }} />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        ))}
+                    </View>
                 </View>
             </View>
         </ScrollView>
@@ -393,5 +454,12 @@ const styles = StyleSheet.create({
     hexInput: {
         flex: 1, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
         fontSize: 15, fontFamily: 'monospace',
+    },
+    categoryTile: {
+        flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8,
+        borderRadius: 12, borderWidth: 1,
+    },
+    smallInput: {
+        height: 40, width: 120, fontSize: 14,
     },
 });

@@ -2,23 +2,24 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
-import { addCustomActivity } from '../database/database';
+import { addCustomActivity, updateActivity, Activity } from '../database/database';
 import { Button } from '../components/Button';
 import { FilterChip } from '../components/FilterChip';
 
-export const AddActivityScreen = ({ navigation }: any) => {
+export const AddActivityScreen = ({ route, navigation }: any) => {
     const { theme, categories, refreshCategories } = useAppContext();
+    const editingActivity = route.params?.activity as Activity | undefined;
 
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
-    const [category, setCategory] = useState('Icebreaker');
-    const [steps, setSteps] = useState('');
-    const [materials, setMaterials] = useState('');
-    const [duration, setDuration] = useState('30 min');
-    const [budget, setBudget] = useState<'Low' | 'Medium' | 'High'>('Low');
-    const [difficulty, setDifficulty] = useState('Easy');
-    const [prepTime, setPrepTime] = useState('None');
-    const [remoteCompatible, setRemoteCompatible] = useState(true);
+    const [name, setName] = useState(editingActivity?.name || '');
+    const [description, setDescription] = useState(editingActivity?.description || '');
+    const [category, setCategory] = useState(editingActivity?.category || 'Icebreaker');
+    const [steps, setSteps] = useState(editingActivity ? JSON.parse(editingActivity.steps).join('\n') : '');
+    const [materials, setMaterials] = useState(editingActivity ? JSON.parse(editingActivity.materials).join('\n') : '');
+    const [duration, setDuration] = useState(editingActivity?.duration || '30 min');
+    const [budget, setBudget] = useState<'Low' | 'Medium' | 'High'>(editingActivity?.estimated_cost as any || 'Low');
+    const [difficulty, setDifficulty] = useState(editingActivity?.difficulty || 'Easy');
+    const [prepTime, setPrepTime] = useState(editingActivity?.prep_time || 'None');
+    const [remoteCompatible, setRemoteCompatible] = useState(editingActivity ? editingActivity.remote_compatible === 1 : true);
     const [saving, setSaving] = useState(false);
 
     const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
@@ -40,8 +41,8 @@ export const AddActivityScreen = ({ navigation }: any) => {
                 return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
             };
 
-            const stepsArray = steps.split('\n').filter(s => s.trim());
-            const materialsArray = materials.split('\n').filter(m => m.trim());
+            const stepsArray = steps.split('\n').filter((s: string) => s.trim());
+            const materialsArray = materials.split('\n').filter((m: string) => m.trim());
 
             const rawCategory = showNewCategoryInput ? newCategoryName.trim() : category;
             const finalCategory = toTitleCase(rawCategory);
@@ -52,27 +53,44 @@ export const AddActivityScreen = ({ navigation }: any) => {
                 return;
             }
 
-            await addCustomActivity({
-                name: name.trim(),
-                description: description.trim(),
-                category: finalCategory,
-                steps: JSON.stringify(stepsArray.length > 0 ? stepsArray : ["No specific steps provided"]),
-                materials: JSON.stringify(materialsArray.length > 0 ? materialsArray : ["None"]),
-                estimated_cost: budget,
-                duration,
-                difficulty,
-                prep_time: prepTime,
-                min_employees: 2,
-                max_employees: 500,
-                indoor_outdoor: 'Both',
-                remote_compatible: remoteCompatible ? 1 : 0,
-            });
+            if (editingActivity) {
+                await updateActivity(editingActivity.id, {
+                    name: name.trim(),
+                    description: description.trim(),
+                    category: finalCategory,
+                    steps: JSON.stringify(stepsArray.length > 0 ? stepsArray : ["No specific steps provided"]),
+                    materials: JSON.stringify(materialsArray.length > 0 ? materialsArray : ["None"]),
+                    estimated_cost: budget,
+                    duration,
+                    difficulty,
+                    prep_time: prepTime,
+                    remote_compatible: remoteCompatible ? 1 : 0,
+                });
+            } else {
+                await addCustomActivity({
+                    name: name.trim(),
+                    description: description.trim(),
+                    category: finalCategory,
+                    steps: JSON.stringify(stepsArray.length > 0 ? stepsArray : ["No specific steps provided"]),
+                    materials: JSON.stringify(materialsArray.length > 0 ? materialsArray : ["None"]),
+                    estimated_cost: budget,
+                    duration,
+                    difficulty,
+                    prep_time: prepTime,
+                    min_employees: 2,
+                    max_employees: 500,
+                    indoor_outdoor: 'Both',
+                    remote_compatible: remoteCompatible ? 1 : 0,
+                });
+            }
 
             await refreshCategories();
 
-            Alert.alert("Saved!", "Your custom activity has been added to the bank.", [
-                { text: "OK", onPress: () => navigation.goBack() }
-            ]);
+            Alert.alert(
+                editingActivity ? "Updated!" : "Saved!",
+                editingActivity ? "Activity changes have been saved." : "Your custom activity has been added to the bank.",
+                [{ text: "OK", onPress: () => navigation.goBack() }]
+            );
         } catch (e) {
             Alert.alert("Error", "Failed to save activity.");
         } finally {
@@ -195,7 +213,7 @@ export const AddActivityScreen = ({ navigation }: any) => {
                     </ScrollView>
 
                     <Button
-                        title="Save Activity"
+                        title={editingActivity ? "Save Changes" : "Save Activity"}
                         onPress={handleSave}
                         loading={saving}
                         style={{ marginTop: 24, marginBottom: 40 }}

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeType, getTheme, Theme, CustomColors } from '../theme';
-import { getUniqueCategories } from '../database/database';
+import { getUniqueCategories, renameCategory as renameCategoryDb } from '../database/database';
 
 interface Organization {
     companyName: string;
@@ -46,6 +46,7 @@ interface AppContextData {
     // Categories
     categories: string[];
     refreshCategories: () => Promise<void>;
+    renameCategory: (oldName: string, newName: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextData | undefined>(undefined);
@@ -143,6 +144,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setCategories(cats);
     };
 
+    const renameCategory = async (oldName: string, newName: string) => {
+        await renameCategoryDb(oldName, newName);
+        await refreshCategories();
+    };
+
     const activeThemeMode = preferences.theme === 'system'
         ? (systemColorScheme || 'light')
         : preferences.theme;
@@ -169,6 +175,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 unlockPro,
                 categories,
                 refreshCategories,
+                renameCategory,
                 setGenerationCount,
                 setMonthlyTarget
             }}
