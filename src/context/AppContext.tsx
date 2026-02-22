@@ -3,6 +3,7 @@ import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeType, getTheme, Theme, CustomColors } from '../theme';
 import { getUniqueCategories, renameCategory as renameCategoryDb } from '../database/database';
+import { VersionService, UpdateInfo } from '../utils/VersionService';
 
 interface Organization {
     companyName: string;
@@ -47,6 +48,10 @@ interface AppContextData {
     categories: string[];
     refreshCategories: () => Promise<void>;
     renameCategory: (oldName: string, newName: string) => Promise<void>;
+
+    // Update info
+    updateInfo: UpdateInfo | null;
+    checkUpdate: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextData | undefined>(undefined);
@@ -68,6 +73,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const [isFirstLaunch, setIsFirstLaunchState] = useState<boolean>(true);
     const [customColors, setCustomColorsState] = useState<CustomColors>({});
     const [categories, setCategories] = useState<string[]>([]);
+    const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     // Load initial data
@@ -149,6 +155,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await refreshCategories();
     };
 
+    const checkUpdate = async () => {
+        const info = await VersionService.checkForUpdates();
+        if (info?.hasUpdate) {
+            setUpdateInfo(info);
+        }
+    };
+
     const activeThemeMode = preferences.theme === 'system'
         ? (systemColorScheme || 'light')
         : preferences.theme;
@@ -177,7 +190,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 refreshCategories,
                 renameCategory,
                 setGenerationCount,
-                setMonthlyTarget
+                setMonthlyTarget,
+                updateInfo,
+                checkUpdate
             }}
         >
             {children}

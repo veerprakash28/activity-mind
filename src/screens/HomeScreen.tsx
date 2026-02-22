@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
@@ -13,7 +13,7 @@ import { getActivityStats, getUpcomingActivity, Activity, ActivityHistory, getDb
 import { VersionService, UpdateInfo } from '../utils/VersionService';
 
 export const HomeScreen = () => {
-    const { theme, organization, preferences, categories: dynamicCategories } = useAppContext();
+    const { theme, organization, preferences, categories: dynamicCategories, updateInfo, checkUpdate } = useAppContext();
     const navigation = useNavigation();
 
     const [refreshing, setRefreshing] = useState(false);
@@ -21,8 +21,7 @@ export const HomeScreen = () => {
     const [upcoming, setUpcoming] = useState<(Activity & ActivityHistory) | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
 
-    // Update Checker State
-    const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+    // Update Checker State (controlled via AppContext)
     const [updateModalVisible, setUpdateModalVisible] = useState(false);
 
     const loadData = async () => {
@@ -50,20 +49,21 @@ export const HomeScreen = () => {
     useFocusEffect(
         useCallback(() => {
             loadData();
-
-            const checkUpdate = async () => {
-                const info = await VersionService.checkForUpdates();
-                if (info?.hasUpdate) {
-                    setUpdateInfo(info);
-                    const shouldShow = await VersionService.shouldShowModal();
-                    if (shouldShow) {
-                        setUpdateModalVisible(true);
-                    }
-                }
-            };
             checkUpdate();
         }, [])
     );
+
+    useEffect(() => {
+        if (updateInfo?.hasUpdate) {
+            const checkSnooze = async () => {
+                const shouldShow = await VersionService.shouldShowModal();
+                if (shouldShow) {
+                    setUpdateModalVisible(true);
+                }
+            };
+            checkSnooze();
+        }
+    }, [updateInfo]);
 
     const onRefresh = async () => {
         setRefreshing(true);

@@ -26,7 +26,7 @@ const COLOR_PRESETS = [
 const isValidHex = (hex: string) => /^#([0-9A-Fa-f]{6})$/.test(hex);
 
 export const SettingsScreen = ({ navigation }: any) => {
-    const { theme, preferences, setThemePreference, setGenerationCount, setMonthlyTarget, organization, setOrganization, customColors, setCustomColors, categories, renameCategory } = useAppContext();
+    const { theme, preferences, setThemePreference, setGenerationCount, setMonthlyTarget, organization, setOrganization, customColors, setCustomColors, categories, renameCategory, updateInfo, checkUpdate } = useAppContext();
 
     const [activeTab, setActiveTab] = useState<'org' | 'theme'>('org');
 
@@ -49,19 +49,12 @@ export const SettingsScreen = ({ navigation }: any) => {
     const [newCategoryName, setNewCategoryName] = useState('');
     const [saving, setSaving] = useState(false);
 
-    // Update state
-    const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+    // Update state (modal visibility only, data from context)
     const [updateModalVisible, setUpdateModalVisible] = useState(false);
 
     useFocusEffect(
         React.useCallback(() => {
-            const check = async () => {
-                const info = await VersionService.checkForUpdates();
-                if (info?.hasUpdate) {
-                    setUpdateInfo(info);
-                }
-            };
-            check();
+            checkUpdate();
         }, [])
     );
 

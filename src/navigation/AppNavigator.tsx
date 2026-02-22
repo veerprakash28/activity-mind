@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, StatusBar, Platform } from 'react-native';
+import { View, TouchableOpacity, StatusBar, Platform, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -36,7 +36,7 @@ const ActivityBankStack = () => {
 };
 
 const TabNavigator = () => {
-    const { theme } = useAppContext();
+    const { theme, updateInfo } = useAppContext();
 
     return (
         <Tab.Navigator
@@ -75,7 +75,12 @@ const TabNavigator = () => {
                             style={{ marginRight: 16 }}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                            <MaterialCommunityIcons name="cog-outline" size={24} color={theme.colors.iconDefault} />
+                            <View>
+                                <MaterialCommunityIcons name="cog-outline" size={24} color={theme.colors.iconDefault} />
+                                {updateInfo && (
+                                    <View style={[styles.dot, { backgroundColor: theme.colors.error || '#EF4444' }]} />
+                                )}
+                            </View>
                         </TouchableOpacity>
                     ),
                 })}
@@ -90,11 +95,16 @@ const TabNavigator = () => {
                     ),
                     headerRight: () => (
                         <TouchableOpacity
-                            onPress={() => navigation.navigate('Generate', { openSettings: true })}
+                            onPress={() => navigation.navigate('Settings')}
                             style={{ marginRight: 16 }}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                            <MaterialCommunityIcons name="cog-outline" size={24} color={theme.colors.iconDefault} />
+                            <View>
+                                <MaterialCommunityIcons name="cog-outline" size={24} color={theme.colors.iconDefault} />
+                                {updateInfo && (
+                                    <View style={[styles.dot, { backgroundColor: theme.colors.error || '#EF4444' }]} />
+                                )}
+                            </View>
                         </TouchableOpacity>
                     ),
                 })}
@@ -166,3 +176,16 @@ export const AppNavigator = () => {
         </RootStack.Navigator>
     );
 };
+
+const styles = StyleSheet.create({
+    dot: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        borderWidth: 1.5,
+        borderColor: '#FFF',
+    }
+});
