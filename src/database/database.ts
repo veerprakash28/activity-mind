@@ -1,5 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { INITIAL_ACTIVITIES } from './activityBank';
+import { NotificationService } from '../utils/NotificationService';
 
 const DB_NAME = 'activitymind.db';
 
@@ -28,6 +29,7 @@ export interface ActivityHistory {
     completed: number; // 0 or 1
     rating: number | null;
     feedback: string | null;
+    notification_id: string | null;
     created_at: string;
 }
 
@@ -86,6 +88,7 @@ export const initDb = async () => {
       completed INTEGER DEFAULT 0,
       rating INTEGER,
       feedback TEXT,
+      notification_id TEXT,
       created_at TEXT NOT NULL,
       FOREIGN KEY (activity_id) REFERENCES activities(id)
     );
@@ -104,6 +107,14 @@ export const initDb = async () => {
         if (!hasIsCustom) {
             console.log("Migration: Adding is_custom column to activities table...");
             await db.execAsync(`ALTER TABLE activities ADD COLUMN is_custom INTEGER DEFAULT 0;`);
+        }
+
+        // Migration: Add notification_id to activity_history
+        const historyInfo = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(activity_history)`);
+        const hasNotificationId = historyInfo.some(col => col.name === 'notification_id');
+        if (!hasNotificationId) {
+            console.log("Migration: Adding notification_id column to activity_history table...");
+            await db.execAsync(`ALTER TABLE activity_history ADD COLUMN notification_id TEXT;`);
         }
     } catch (e) {
         console.error("Migration failed", e);
@@ -237,11 +248,42 @@ export const getActivityStats = async () => {
 export const saveHistory = async (activityId: number, scheduledDate: string) => {
     const db = await getDb();
     const normalized = normalizeDate(new Date(scheduledDate));
+
+    // Fetch activity name for the notification
+    const activity = await db.getFirstAsync<{ name: string }>(`SELECT name FROM activities WHERE id = ?`, [activityId]);
+    const activityName = activity?.name || 'Upcoming Activity';
+
     const result = await db.runAsync(
         `INSERT INTO activity_history (activity_id, scheduled_date, created_at) VALUES (?, ?, ?)`,
         [activityId, normalized, new Date().toISOString()]
     );
-    return result.lastInsertRowId;
+
+    const historyId = result.lastInsertRowId;
+
+    // Schedule notification
+    const notificationId = await NotificationService.scheduleActivityReminder(historyId, activityName, normalized);
+
+    if (notificationId) {
+        await db.runAsync(`UPDATE activity_history SET notification_id = ? WHERE id = ?`, [notificationId, historyId]);
+    }
+
+    return historyId;
+};
+
+export const removeScheduledActivity = async (historyId: number) => {
+    const db = await getDb();
+
+    // Fetch notification ID to cancel it
+    const record = await db.getFirstAsync<{ notification_id: string }>(
+        `SELECT notification_id FROM activity_history WHERE id = ?`,
+        [historyId]
+    );
+
+    if (record?.notification_id) {
+        await NotificationService.cancelActivityReminder(record.notification_id);
+    }
+
+    await db.runAsync(`DELETE FROM activity_history WHERE id = ?`, [historyId]);
 };
 
 export const markCompleted = async (historyId: number, rating: number, feedback: string) => {
@@ -380,6 +422,17 @@ export const updateActivity = async (id: number, activity: Partial<Activity>) =>
 
 export const deleteActivity = async (activityId: number) => {
     const db = await getDb();
+
+    // Clean up notifications for this activity before deleting history
+    const historyItems = await db.getAllAsync<{ notification_id: string }>(
+        `SELECT notification_id FROM activity_history WHERE activity_id = ? AND notification_id IS NOT NULL`,
+        [activityId]
+    );
+
+    for (const item of historyItems) {
+        await NotificationService.cancelActivityReminder(item.notification_id);
+    }
+
     // Also clean up related records
     await db.runAsync(`DELETE FROM favorites WHERE activity_id = ?`, [activityId]);
     await db.runAsync(`DELETE FROM activity_history WHERE activity_id = ?`, [activityId]);
