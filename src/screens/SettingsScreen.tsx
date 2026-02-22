@@ -4,6 +4,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
 import { Button } from '../components/Button';
 import { FilterChip } from '../components/FilterChip';
+import { VersionService, UpdateInfo } from '../utils/VersionService';
+import { UpdateModal } from '../components/UpdateModal';
+import { useFocusEffect } from '@react-navigation/native';
 
 const COLOR_PRESETS = [
     { label: 'Blue', value: '#2563EB' },
@@ -45,6 +48,22 @@ export const SettingsScreen = ({ navigation }: any) => {
     const [editingCategory, setEditingCategory] = useState<string | null>(null);
     const [newCategoryName, setNewCategoryName] = useState('');
     const [saving, setSaving] = useState(false);
+
+    // Update state
+    const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+    const [updateModalVisible, setUpdateModalVisible] = useState(false);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            const check = async () => {
+                const info = await VersionService.checkForUpdates();
+                if (info?.hasUpdate) {
+                    setUpdateInfo(info);
+                }
+            };
+            check();
+        }, [])
+    );
 
     // Detect unsaved changes
     const hasOrgChanges = useMemo(() => {
@@ -182,6 +201,23 @@ export const SettingsScreen = ({ navigation }: any) => {
 
     const renderOrgTab = () => (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            {/* Update available tile */}
+            {updateInfo && (
+                <TouchableOpacity
+                    onPress={() => setUpdateModalVisible(true)}
+                    style={[styles.updateTile, { backgroundColor: theme.colors.primary + '10', borderColor: theme.colors.primary + '30' }]}
+                >
+                    <View style={[styles.updateIcon, { backgroundColor: theme.colors.primary }]}>
+                        <MaterialCommunityIcons name="rocket-launch" size={18} color="#FFF" />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text style={[theme.typography.body1, { color: theme.colors.text, fontWeight: '700' }]}>Update Available!</Text>
+                        <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>Version v{updateInfo.latestVersion} is ready to download.</Text>
+                    </View>
+                    <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+            )}
+
             {/* Profile Card with Save */}
             <View style={[styles.profileCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                 <View style={[styles.avatarCircle, { backgroundColor: theme.colors.primaryLight }]}>
@@ -401,6 +437,12 @@ export const SettingsScreen = ({ navigation }: any) => {
             ) : null}
 
             {activeTab === 'org' ? renderOrgTab() : renderThemeTab()}
+
+            <UpdateModal
+                visible={updateModalVisible}
+                updateInfo={updateInfo}
+                onClose={() => setUpdateModalVisible(false)}
+            />
         </View>
     );
 };
@@ -461,5 +503,17 @@ const styles = StyleSheet.create({
     },
     smallInput: {
         height: 40, width: 120, fontSize: 14,
+    },
+    updateTile: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderRadius: 20,
+        borderWidth: 1,
+        marginBottom: 20,
+    },
+    updateIcon: {
+        width: 36, height: 36, borderRadius: 12,
+        alignItems: 'center', justifyContent: 'center',
     },
 });

@@ -8,8 +8,9 @@ import { FilterChip } from '../components/FilterChip';
 import { Button } from '../components/Button';
 import { ActivityCard } from '../components/ActivityCard';
 import { ActivityDetailModal } from '../components/ActivityDetailModal';
+import { UpdateModal } from '../components/UpdateModal';
 import { getActivityStats, getUpcomingActivity, Activity, ActivityHistory, getDb, normalizeDate } from '../database/database';
-import { VersionService } from '../utils/VersionService';
+import { VersionService, UpdateInfo } from '../utils/VersionService';
 
 export const HomeScreen = () => {
     const { theme, organization, preferences, categories: dynamicCategories } = useAppContext();
@@ -19,6 +20,10 @@ export const HomeScreen = () => {
     const [stats, setStats] = useState({ completedThisMonth: 0 });
     const [upcoming, setUpcoming] = useState<(Activity & ActivityHistory) | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
+
+    // Update Checker State
+    const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+    const [updateModalVisible, setUpdateModalVisible] = useState(false);
 
     const loadData = async () => {
         try {
@@ -46,22 +51,14 @@ export const HomeScreen = () => {
         useCallback(() => {
             loadData();
 
-            // Check for updates periodically
             const checkUpdate = async () => {
                 const info = await VersionService.checkForUpdates();
                 if (info?.hasUpdate) {
-                    Alert.alert(
-                        "Update Available!",
-                        `A newer version(${info.latestVersion}) is available on GitHub.You are on ${info.currentVersion}.\n\n` +
-                        "Updating ensures you have the latest activities and stability fixes.",
-                        [
-                            { text: "Later", style: "cancel" },
-                            {
-                                text: "Download Now",
-                                onPress: () => VersionService.openDownloadPage(info.downloadUrl)
-                            }
-                        ]
-                    );
+                    setUpdateInfo(info);
+                    const shouldShow = await VersionService.shouldShowModal();
+                    if (shouldShow) {
+                        setUpdateModalVisible(true);
+                    }
                 }
             };
             checkUpdate();
@@ -181,6 +178,12 @@ export const HomeScreen = () => {
                 activity={upcoming}
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
+            />
+
+            <UpdateModal
+                visible={updateModalVisible}
+                updateInfo={updateInfo}
+                onClose={() => setUpdateModalVisible(false)}
             />
         </View>
     );

@@ -1,8 +1,10 @@
 import { Platform, Linking } from 'react-native';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const GITHUB_REPO = 'veerprakash28/activity-mind';
 const API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
+const SNOOZE_KEY = 'update_snooze_timestamp';
 
 export interface UpdateInfo {
     hasUpdate: boolean;
@@ -87,6 +89,33 @@ export const VersionService = {
         const canOpen = await Linking.canOpenURL(url);
         if (canOpen) {
             await Linking.openURL(url);
+        }
+    },
+
+    /**
+     * Snoozes the update prompt for 24 hours
+     */
+    snoozeUpdate: async () => {
+        try {
+            await AsyncStorage.setItem(SNOOZE_KEY, Date.now().toString());
+        } catch (e) {
+            console.error('Failed to snooze update:', e);
+        }
+    },
+
+    /**
+     * Checks if the update modal should be shown (based on 24h snooze)
+     */
+    shouldShowModal: async (): Promise<boolean> => {
+        try {
+            const lastSnooze = await AsyncStorage.getItem(SNOOZE_KEY);
+            if (!lastSnooze) return true;
+
+            const lastSnoozeTime = parseInt(lastSnooze, 10);
+            const twentyFourHours = 24 * 60 * 60 * 1000;
+            return (Date.now() - lastSnoozeTime) > twentyFourHours;
+        } catch (e) {
+            return true;
         }
     }
 };
