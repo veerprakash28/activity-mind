@@ -168,6 +168,14 @@ export const initDb = async () => {
     return true;
 };
 
+// --- HELPERS ---
+
+export const normalizeDate = (date: Date) => {
+    const d = new Date(date);
+    d.setHours(12, 0, 0, 0); // Set to noon to avoid day shifting
+    return d.toISOString();
+};
+
 // --- DATA ACCESS METHODS ---
 
 // Get all activities (respecting some basic filters if needed)
@@ -201,10 +209,13 @@ export const getRecentHistory = async (days = 30) => {
 
 export const getUpcomingActivity = async () => {
     const db = await getDb();
-    const now = new Date().toISOString();
+    const now = new Date();
+    // Use the start of today at noon as the baseline
+    const todayNoon = normalizeDate(now);
+
     return await db.getFirstAsync<ActivityHistory & Activity>(
         `SELECT h.*, a.name, a.category, a.duration FROM activity_history h JOIN activities a ON h.activity_id = a.id WHERE h.scheduled_date >= ? AND h.completed = 0 ORDER BY h.scheduled_date ASC LIMIT 1`,
-        [now]
+        [todayNoon]
     );
 };
 
@@ -225,9 +236,10 @@ export const getActivityStats = async () => {
 
 export const saveHistory = async (activityId: number, scheduledDate: string) => {
     const db = await getDb();
+    const normalized = normalizeDate(new Date(scheduledDate));
     const result = await db.runAsync(
         `INSERT INTO activity_history (activity_id, scheduled_date, created_at) VALUES (?, ?, ?)`,
-        [activityId, scheduledDate, new Date().toISOString()]
+        [activityId, normalized, new Date().toISOString()]
     );
     return result.lastInsertRowId;
 };

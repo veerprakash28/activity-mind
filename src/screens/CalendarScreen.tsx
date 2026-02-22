@@ -12,7 +12,7 @@ import { Button } from '../components/Button';
 export const CalendarScreen = ({ route }: any) => {
     const { theme } = useAppContext();
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
     const [selectedDate, setSelectedDate] = useState(route?.params?.date || todayStr);
     const [history, setHistory] = useState<(ActivityHistory & Activity)[]>([]);
     const [markedDates, setMarkedDates] = useState<any>({});

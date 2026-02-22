@@ -8,7 +8,7 @@ import { FilterChip } from '../components/FilterChip';
 import { ActivityCard } from '../components/ActivityCard';
 import { ActivityDetailModal } from '../components/ActivityDetailModal';
 import { generateActivities, FilterParams, SmartEngineResult } from '../database/smartEngine';
-import { saveHistory, toggleFavorite, isFavorite, Activity } from '../database/database';
+import { saveHistory, toggleFavorite, isFavorite, Activity, normalizeDate } from '../database/database';
 
 export const GenerateScreen = ({ route, navigation }: any) => {
     const { theme, organization, categories, preferences, setGenerationCount } = useAppContext();
@@ -144,7 +144,6 @@ export const GenerateScreen = ({ route, navigation }: any) => {
             setSelectedDate(date);
             if (Platform.OS === 'android' && event.type === 'set') {
                 // On Android, picker dismisses on selection
-                date.setHours(12, 0, 0, 0);
                 await saveHistory(schedulingActivity.id, date.toISOString());
                 Alert.alert("Scheduled!", `Activity added to ${date.toLocaleDateString()}.`);
                 setSchedulingActivity(null);
@@ -154,10 +153,8 @@ export const GenerateScreen = ({ route, navigation }: any) => {
 
     const confirmIOSDate = async () => {
         if (schedulingActivity) {
-            const date = new Date(selectedDate);
-            date.setHours(12, 0, 0, 0);
-            await saveHistory(schedulingActivity.id, date.toISOString());
-            Alert.alert("Scheduled!", `Activity added to ${date.toLocaleDateString()}.`);
+            await saveHistory(schedulingActivity.id, selectedDate.toISOString());
+            Alert.alert("Scheduled!", `Activity added to ${selectedDate.toLocaleDateString()}.`);
             setShowDatePicker(false);
             setSchedulingActivity(null);
         }

@@ -8,7 +8,7 @@ import { FilterChip } from '../components/FilterChip';
 import { Button } from '../components/Button';
 import { ActivityCard } from '../components/ActivityCard';
 import { ActivityDetailModal } from '../components/ActivityDetailModal';
-import { getActivityStats, getUpcomingActivity, Activity, ActivityHistory, getDb } from '../database/database';
+import { getActivityStats, getUpcomingActivity, Activity, ActivityHistory, getDb, normalizeDate } from '../database/database';
 
 export const HomeScreen = () => {
     const { theme, organization, preferences, categories: dynamicCategories } = useAppContext();
@@ -26,7 +26,7 @@ export const HomeScreen = () => {
 
             // Fetch upcoming with all activity fields (explicit select to avoid name collisions)
             const db = await getDb();
-            const now = new Date().toISOString();
+            const now = normalizeDate(new Date());
             const next = await db.getFirstAsync<Activity & ActivityHistory>(
                 `SELECT h.id as historyId, h.scheduled_date, h.completed, a.* 
                  FROM activity_history h 
