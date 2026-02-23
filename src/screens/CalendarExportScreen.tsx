@@ -122,33 +122,59 @@ export const CalendarExportScreen = ({ navigation }: any) => {
     };
 
     const handleSVGExport = async () => {
-        setStatusType('info');
-        setStatusTitle('Generating SVG');
-        setStatusMessage('Creating editable vector file for Figma...');
-        setStatusVisible(true);
-
         try {
-            const svgContent = await generateSVGContent();
-            const filename = `HR_Calendar_${currentDate.getMonth() + 1}_${currentDate.getFullYear()}.svg`;
-            // @ts-ignore
-            const cacheDir = FileSystem.cacheDirectory;
-            const fileUri = `${cacheDir}${filename}`;
+            setStatusType('info');
+            setStatusTitle('Generating SVG');
+            setStatusMessage('Please wait while we prepare your editable calendar...');
+            setStatusVisible(true);
 
-            // @ts-ignore
+            const svgContent = await generateSVGContent();
+            const fileName = `ActivityMind_Calendar_${currentDate.getFullYear()}_${currentDate.getMonth() + 1}.svg`;
+            const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+
             await FileSystem.writeAsStringAsync(fileUri, svgContent, {
                 encoding: 'utf8',
             });
 
-            setStatusVisible(false);
-            await Sharing.shareAsync(fileUri, {
-                mimeType: 'image/svg+xml',
-                dialogTitle: 'Share Editable SVG',
-                UTI: 'public.svg-image',
-            });
+            if (Platform.OS === 'android') {
+                const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+                if (permissions.granted) {
+                    const base64Content = await FileSystem.readAsStringAsync(fileUri, { encoding: 'base64' });
+                    const newUri = await FileSystem.StorageAccessFramework.createFileAsync(
+                        permissions.directoryUri,
+                        fileName,
+                        'image/svg+xml'
+                    );
+                    await FileSystem.writeAsStringAsync(newUri, base64Content, { encoding: 'base64' });
+
+                    setStatusType('success');
+                    setStatusTitle('Download Complete');
+                    setStatusMessage(`SVG file has been saved to your selected folder.`);
+                    setStatusVisible(true);
+                } else {
+                    // Fallback to sharing if permission denied
+                    await Sharing.shareAsync(fileUri, {
+                        mimeType: 'image/svg+xml',
+                        dialogTitle: 'Share Editable SVG',
+                        UTI: 'public.svg-image',
+                    });
+                    setStatusVisible(false);
+                }
+            } else {
+                // iOS
+                await Sharing.shareAsync(fileUri, {
+                    mimeType: 'image/svg+xml',
+                    dialogTitle: 'Save Editable SVG',
+                    UTI: 'public.svg-image',
+                });
+                setStatusVisible(false);
+            }
         } catch (err) {
+            console.error('SVG Export failed:', err);
             setStatusType('error');
             setStatusTitle('Export Failed');
             setStatusMessage('Could not generate SVG file.');
+            setStatusVisible(true);
         }
     };
 
@@ -168,7 +194,6 @@ export const CalendarExportScreen = ({ navigation }: any) => {
         let logoBase64 = '';
         if (organization?.orgLogoUri) {
             try {
-                // @ts-ignore
                 logoBase64 = await FileSystem.readAsStringAsync(organization.orgLogoUri, {
                     encoding: 'base64',
                 });
@@ -701,8 +726,8 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                     onPress={handleSVGExport}
                     style={[styles.secondaryBtn, { borderColor: theme.colors.primary, marginTop: 15 }]}
                 >
-                    <Ionicons name="color-palette-outline" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
-                    <Text style={[styles.secondaryBtnText, { color: theme.colors.primary }]}>Share Editable SVG (for Figma)</Text>
+                    <Ionicons name="download-outline" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
+                    <Text style={[styles.secondaryBtnText, { color: theme.colors.primary }]}>Download Editable SVG (for Figma)</Text>
                 </TouchableOpacity>
             </ScrollView>
 

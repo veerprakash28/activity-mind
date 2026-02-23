@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert, S
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
-import { getAllActivities, deleteActivity, Activity } from '../database/database';
+import { getAllActivities, deleteActivity, Activity, getFavorites } from '../database/database';
 import { ActivityCard } from '../components/ActivityCard';
 import { ActivityDetailModal } from '../components/ActivityDetailModal';
 import { FilterChip } from '../components/FilterChip';
@@ -12,6 +12,7 @@ import { StatusModal, StatusType } from '../components/StatusModal';
 
 export const ActivityBankScreen = ({ navigation }: any) => {
     const { theme, categories } = useAppContext();
+    const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
     const [activities, setActivities] = useState<Activity[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
@@ -27,10 +28,17 @@ export const ActivityBankScreen = ({ navigation }: any) => {
     const [statusConfirmLabel, setStatusConfirmLabel] = useState('Delete');
     const [onStatusConfirm, setOnStatusConfirm] = useState<(() => void) | undefined>(undefined);
 
+    const setActivitiesData = (data: Activity[]) => {
+        setActivities(data);
+    };
+
     const loadActivities = async () => {
         try {
             const data = await getAllActivities();
             setActivities(data);
+
+            const favs = await getFavorites();
+            setFavoriteIds(new Set(favs.map(f => f.id)));
         } catch (e) {
             console.error("Failed to load activities", e);
         }
@@ -135,7 +143,12 @@ export const ActivityBankScreen = ({ navigation }: any) => {
                 contentContainerStyle={styles.listContent}
                 renderItem={({ item }) => (
                     <View style={styles.cardWrapper}>
-                        <ActivityCard activity={item} expanded={false} onPress={() => { setSelectedActivity(item); setModalVisible(true); }} />
+                        <ActivityCard
+                            activity={item}
+                            expanded={false}
+                            isFavorite={favoriteIds.has(item.id)}
+                            onPress={() => { setSelectedActivity(item); setModalVisible(true); }}
+                        />
                         {activeTab === 'custom' ? (
                             <View style={styles.cardActionOverlay}>
                                 <TouchableOpacity
@@ -182,35 +195,7 @@ export const ActivityBankScreen = ({ navigation }: any) => {
                 activity={selectedActivity}
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
-                actions={selectedActivity?.is_custom ? (
-                    <>
-                        <Button
-                            title="Edit Details"
-                            variant="outline"
-                            icon={<MaterialCommunityIcons name="pencil-outline" size={18} color={theme.colors.primary} />}
-                            onPress={() => {
-                                setModalVisible(false);
-                                navigation.navigate('AddActivity', { activity: selectedActivity });
-                            }}
-                            style={{ flex: 1 }}
-                            size="small"
-                        />
-                        <Button
-                            title="Delete"
-                            variant="outline"
-                            icon={<MaterialCommunityIcons name="trash-can-outline" size={18} color={theme.colors.error} />}
-                            onPress={() => {
-                                setModalVisible(false);
-                                // Ensure selectedActivity is not null before passing to handleDelete
-                                if (selectedActivity) {
-                                    handleDelete(selectedActivity);
-                                }
-                            }}
-                            style={{ flex: 1, borderColor: theme.colors.error }}
-                            size="small"
-                        />
-                    </>
-                ) : undefined}
+                onUpdate={loadActivities}
             />
 
             <StatusModal

@@ -223,6 +223,8 @@ export const CalendarScreen = ({ route }: any) => {
                 activity={selectedActivity}
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
+                hideSchedule={true}
+                hideSave={true}
             />
 
             <StatusModal

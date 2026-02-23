@@ -8,9 +8,11 @@ interface ActivityCardProps {
     activity: Activity;
     onPress?: () => void;
     expanded?: boolean;
+    isFavorite?: boolean;
+    hideFavoriteIcon?: boolean;
 }
 
-export const ActivityCard = ({ activity, onPress, expanded = false }: ActivityCardProps) => {
+export const ActivityCard = ({ activity, onPress, expanded = false, isFavorite = false, hideFavoriteIcon = false }: ActivityCardProps) => {
     const { theme } = useAppContext();
 
     const getCategoryColor = (category: string) => {
@@ -61,9 +63,11 @@ export const ActivityCard = ({ activity, onPress, expanded = false }: ActivityCa
                         {activity.category.toUpperCase()}
                     </Text>
                 </View>
-                <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
-                    {activity.duration}
-                </Text>
+                <View style={styles.headerRight}>
+                    <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
+                        {activity.duration}
+                    </Text>
+                </View>
             </View>
 
             {/* Title & Description */}
@@ -97,6 +101,11 @@ export const ActivityCard = ({ activity, onPress, expanded = false }: ActivityCa
                         {activity.indoor_outdoor}
                     </Text>
                 </View>
+                {isFavorite && !hideFavoriteIcon && (
+                    <View style={[styles.metaItem, { marginLeft: 'auto' }]}>
+                        <MaterialCommunityIcons name="heart" size={18} color={theme.colors.error} />
+                    </View>
+                )}
             </View>
 
             {/* Expanded Details section */}
@@ -134,6 +143,10 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    headerRight: {
+        flexDirection: 'row',
         alignItems: 'center',
     },
     categoryBadge: {

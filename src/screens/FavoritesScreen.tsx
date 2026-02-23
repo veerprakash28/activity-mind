@@ -63,6 +63,7 @@ export const FavoritesScreen = () => {
                     <ActivityCard
                         activity={item}
                         expanded={false}
+                        hideFavoriteIcon={true}
                         onPress={() => { setSelectedActivity(item); setModalVisible(true); }}
                     />
                 )}
@@ -72,16 +73,7 @@ export const FavoritesScreen = () => {
                 activity={selectedActivity}
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
-                actions={selectedActivity ? (
-                    <Button
-                        title="Remove from Favorites"
-                        variant="outline"
-                        icon={<MaterialCommunityIcons name="heart-off" size={18} color={theme.colors.primary} />}
-                        onPress={() => { handleRemoveFavorite(selectedActivity.id); setModalVisible(false); }}
-                        style={{ flex: 1 }}
-                        size="small"
-                    />
-                ) : undefined}
+                onUpdate={loadFavorites}
             />
         </View>
     );

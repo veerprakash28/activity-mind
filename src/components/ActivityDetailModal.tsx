@@ -1,8 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAppContext } from '../context/AppContext';
-import { Activity, updateActivityRecurringPattern } from '../database/database';
+import { Activity, updateActivityRecurringPattern, saveHistory, toggleFavorite, getFavorites } from '../database/database';
+import { NotificationService } from '../utils/NotificationService';
+import { Button } from './Button';
+import { StatusModal, StatusType } from './StatusModal';
 
 interface ActivityDetailModalProps {
     activity: Activity | null;
@@ -10,17 +14,93 @@ interface ActivityDetailModalProps {
     onClose: () => void;
     onUpdate?: () => void;
     actions?: React.ReactNode;
+    hideSchedule?: boolean;
+    hideSave?: boolean;
 }
 
-export const ActivityDetailModal = ({ activity, visible, onClose, onUpdate, actions }: ActivityDetailModalProps) => {
+export const ActivityDetailModal = ({
+    activity,
+    visible,
+    onClose,
+    onUpdate,
+    actions,
+    hideSchedule = false,
+    hideSave = false
+}: ActivityDetailModalProps) => {
     const { theme } = useAppContext();
     const [recurringPattern, setRecurringPattern] = React.useState<string | null>(activity?.recurring_pattern || null);
+    const [isFav, setIsFav] = React.useState(false);
+
+    // Scheduling state
+    const [showDatePicker, setShowDatePicker] = React.useState(false);
+    const [schedulingDate, setSchedulingDate] = React.useState(new Date());
+
+    // Status Modal state
+    const [statusVisible, setStatusVisible] = React.useState(false);
+    const [statusType, setStatusType] = React.useState<StatusType>('success');
+    const [statusTitle, setStatusTitle] = React.useState('');
+    const [statusMessage, setStatusMessage] = React.useState('');
 
     React.useEffect(() => {
         setRecurringPattern(activity?.recurring_pattern || null);
+        if (activity) {
+            checkFavorite();
+        }
     }, [activity]);
 
+    const checkFavorite = async () => {
+        if (!activity) return;
+        const favs = await getFavorites();
+        setIsFav(favs.some(f => f.id === activity.id));
+    };
+
     if (!activity) return null;
+
+    const handleToggleFavorite = async () => {
+        await toggleFavorite(activity.id);
+        setIsFav(!isFav);
+        if (onUpdate) onUpdate();
+    };
+
+    const handleDateChange = (event: any, selectedDate?: Date) => {
+        if (Platform.OS === 'android') {
+            setShowDatePicker(false);
+            if (event.type === 'set' && selectedDate) {
+                setSchedulingDate(selectedDate);
+                confirmSchedule(selectedDate);
+            }
+        } else {
+            // iOS
+            if (selectedDate) {
+                setSchedulingDate(selectedDate);
+            }
+        }
+    };
+
+    const confirmSchedule = async (date: Date) => {
+        try {
+            const dateStr = date.toISOString().split('T')[0];
+            const historyId = await saveHistory(activity.id, dateStr);
+
+            // Schedule notification
+            await NotificationService.scheduleActivityReminder(
+                historyId,
+                activity.name,
+                dateStr
+            );
+
+            setStatusType('success');
+            setStatusTitle('Scheduled!');
+            setStatusMessage(`"${activity.name}" has been added to your calendar for ${date.toLocaleDateString()}.`);
+            setStatusVisible(true);
+            if (onUpdate) onUpdate();
+        } catch (e) {
+            setStatusType('error');
+            setStatusTitle('Scheduling Failed');
+            setStatusMessage('Could not add activity to calendar. Please try again.');
+            setStatusVisible(true);
+        }
+    };
 
     const handleSetRecurring = async (day: number | null) => {
         const pattern = day !== null ? `weekly-${day}` : null;
@@ -198,13 +278,81 @@ export const ActivityDetailModal = ({ activity, visible, onClose, onUpdate, acti
                     </ScrollView>
 
                     {/* Actions */}
-                    {actions ? (
+                    {(!hideSchedule || !hideSave) && (
                         <View style={[styles.actionBar, { borderTopColor: theme.colors.border }]}>
+                            {!hideSchedule && (
+                                <Button
+                                    title="Schedule"
+                                    variant="primary"
+                                    icon={<MaterialCommunityIcons name="calendar-plus" size={18} color={theme.colors.white} />}
+                                    onPress={() => setShowDatePicker(true)}
+                                    style={{ flex: 1 }}
+                                    size="small"
+                                />
+                            )}
+                            {!hideSave && (
+                                <Button
+                                    title={isFav ? "Saved" : "Save"}
+                                    variant="outline"
+                                    icon={<MaterialCommunityIcons name={isFav ? "heart" : "heart-outline"} size={18} color={isFav ? theme.colors.error : theme.colors.primary} />}
+                                    onPress={handleToggleFavorite}
+                                    style={{ flex: 1, borderColor: isFav ? theme.colors.error : theme.colors.primary }}
+                                    textStyle={{ color: isFav ? theme.colors.error : theme.colors.primary }}
+                                    size="small"
+                                />
+                            )}
+                        </View>
+                    )}
+
+                    {actions && (
+                        <View style={[styles.actionBar, { borderTopColor: theme.colors.border, paddingTop: 0 }]}>
                             {actions}
                         </View>
-                    ) : null}
+                    )}
                 </View>
             </View>
+
+            {showDatePicker && (
+                <View>
+                    <DateTimePicker
+                        value={schedulingDate}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={handleDateChange}
+                        minimumDate={new Date()}
+                    />
+                    {Platform.OS === 'ios' && (
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingBottom: 20 }}>
+                            <Button
+                                title="Cancel"
+                                variant="outline"
+                                onPress={() => setShowDatePicker(false)}
+                                size="small"
+                                style={{ flex: 1, marginHorizontal: 10 }}
+                            />
+                            <Button
+                                title="Confirm"
+                                variant="primary"
+                                onPress={() => {
+                                    setShowDatePicker(false);
+                                    confirmSchedule(schedulingDate);
+                                }}
+                                size="small"
+                                style={{ flex: 1, marginHorizontal: 10 }}
+                            />
+                        </View>
+                    )}
+                </View>
+            )}
+
+            <StatusModal
+                visible={statusVisible}
+                type={statusType}
+                title={statusTitle}
+                message={statusMessage}
+                onClose={() => setStatusVisible(false)}
+                confirmLabel="Great!"
+            />
         </Modal>
     );
 };

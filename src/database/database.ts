@@ -206,7 +206,6 @@ export const getUniqueCategories = async () => {
         const result = await db.getAllAsync<{ category: string }>(`SELECT DISTINCT category FROM activities ORDER BY category ASC`);
         return result.map(r => r.category);
     } catch (e) {
-        console.log("Categories not ready yet (table might be missing)");
         return [];
     }
 };
@@ -378,7 +377,7 @@ export const isFavorite = async (activityId: number) => {
 export const getFavorites = async () => {
     const db = await getDb();
     return await db.getAllAsync<Favorite & Activity>(
-        `SELECT f.*, a.* FROM favorites f JOIN activities a ON f.activity_id = a.id ORDER BY f.saved_at DESC`
+        `SELECT a.*, f.saved_at FROM favorites f JOIN activities a ON f.activity_id = a.id ORDER BY f.saved_at DESC`
     );
 };
 

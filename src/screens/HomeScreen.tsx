@@ -20,6 +20,7 @@ export const HomeScreen = () => {
     const [stats, setStats] = useState({ completedThisMonth: 0 });
     const [upcoming, setUpcoming] = useState<(Activity & ActivityHistory) | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
+    const [isUpcomingFavorite, setIsUpcomingFavorite] = useState(false);
 
     // Update Checker State (controlled via AppContext)
     const [updateModalVisible, setUpdateModalVisible] = useState(false);
@@ -34,12 +35,18 @@ export const HomeScreen = () => {
             const now = normalizeDate(new Date());
             const next = await db.getFirstAsync<Activity & ActivityHistory>(
                 `SELECT h.id as historyId, h.scheduled_date, h.completed, a.*
-    FROM activity_history h 
+                 FROM activity_history h 
                  JOIN activities a ON h.activity_id = a.id 
                  WHERE h.scheduled_date >= ? AND h.completed = 0 
                  ORDER BY h.scheduled_date ASC LIMIT 1`,
                 [now]
             );
+
+            if (next) {
+                const favResult = await db.getFirstAsync(`SELECT id FROM favorites WHERE activity_id = ?`, [next.id]);
+                setIsUpcomingFavorite(!!favResult);
+            }
+
             setUpcoming(next ?? null);
         } catch (e) {
             console.error("Failed to load dashboard data", e);
@@ -151,6 +158,7 @@ export const HomeScreen = () => {
                         </View>
                         <ActivityCard
                             activity={upcoming}
+                            isFavorite={isUpcomingFavorite}
                             onPress={() => setModalVisible(true)}
                         />
                     </View>
@@ -178,6 +186,8 @@ export const HomeScreen = () => {
                 activity={upcoming}
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
+                hideSchedule={true}
+                onUpdate={loadData}
             />
 
             <UpdateModal

@@ -239,7 +239,12 @@ export const GenerateScreen = ({ route, navigation }: any) => {
                                 {"Idea " + (index + 1)}
                             </Text>
                         </View>
-                        <ActivityCard activity={activity} expanded={false} onPress={() => openDetail(activity)} />
+                        <ActivityCard
+                            activity={activity}
+                            expanded={false}
+                            isFavorite={!!favoriteMap[activity.id]}
+                            onPress={() => openDetail(activity)}
+                        />
                         <View style={styles.actionRow}>
                             <TouchableOpacity
                                 style={[styles.actionBtn, { borderColor: theme.colors.border }]}
@@ -300,25 +305,8 @@ export const GenerateScreen = ({ route, navigation }: any) => {
                 activity={selectedActivity}
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
-                actions={selectedActivity ? (
-                    <>
-                        <Button
-                            title={favoriteMap[selectedActivity.id] ? "Saved" : "Save"}
-                            variant="outline"
-                            icon={<MaterialCommunityIcons name={favoriteMap[selectedActivity.id] ? "heart" : "heart-outline"} size={18} color={theme.colors.primary} />}
-                            onPress={() => handleToggleFavorite(selectedActivity.id)}
-                            style={{ flex: 1 }}
-                            size="small"
-                        />
-                        <Button
-                            title="Schedule"
-                            icon={<MaterialCommunityIcons name="calendar-plus" size={18} color={theme.colors.white} />}
-                            onPress={() => { setModalVisible(false); handleSchedulePress(selectedActivity); }}
-                            style={{ flex: 1 }}
-                            size="small"
-                        />
-                    </>
-                ) : undefined}
+                hideSchedule={true}
+                hideSave={true}
             />
 
             {/* AI Preferences Modal */}
