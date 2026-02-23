@@ -10,9 +10,10 @@ interface ActivityCardProps {
     expanded?: boolean;
     isFavorite?: boolean;
     hideFavoriteIcon?: boolean;
+    heartPosition?: 'bottom-right' | 'header';
 }
 
-export const ActivityCard = ({ activity, onPress, expanded = false, isFavorite = false, hideFavoriteIcon = false }: ActivityCardProps) => {
+export const ActivityCard = ({ activity, onPress, expanded = false, isFavorite = false, hideFavoriteIcon = false, heartPosition = 'bottom-right' }: ActivityCardProps) => {
     const { theme } = useAppContext();
 
     const getCategoryColor = (category: string) => {
@@ -62,6 +63,9 @@ export const ActivityCard = ({ activity, onPress, expanded = false, isFavorite =
                     <Text style={[theme.typography.caption, { color: badgeColor, fontWeight: '700' }]}>
                         {activity.category.toUpperCase()}
                     </Text>
+                    {isFavorite && !hideFavoriteIcon && heartPosition === 'header' && (
+                        <MaterialCommunityIcons name="heart" size={14} color={theme.colors.error} style={{ marginLeft: 6 }} />
+                    )}
                 </View>
                 <View style={styles.headerRight}>
                     <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
@@ -101,7 +105,7 @@ export const ActivityCard = ({ activity, onPress, expanded = false, isFavorite =
                         {activity.indoor_outdoor}
                     </Text>
                 </View>
-                {isFavorite && !hideFavoriteIcon && (
+                {isFavorite && !hideFavoriteIcon && heartPosition === 'bottom-right' && (
                     <View style={[styles.metaItem, { marginLeft: 'auto' }]}>
                         <MaterialCommunityIcons name="heart" size={18} color={theme.colors.error} />
                     </View>

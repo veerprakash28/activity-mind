@@ -147,6 +147,7 @@ export const ActivityBankScreen = ({ navigation }: any) => {
                             activity={item}
                             expanded={false}
                             isFavorite={favoriteIds.has(item.id)}
+                            heartPosition={item.is_custom ? 'header' : 'bottom-right'}
                             onPress={() => { setSelectedActivity(item); setModalVisible(true); }}
                         />
                         {activeTab === 'custom' ? (

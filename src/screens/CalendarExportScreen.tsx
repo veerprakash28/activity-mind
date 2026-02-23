@@ -261,7 +261,7 @@ export const CalendarExportScreen = ({ navigation }: any) => {
 
     <g transform="translate(520, 150)">
         <rect width="440" height="520" rx="40" fill="${isDarkBackground ? '#1A202C' : '#FFFFFF'}" />
-        <path d="M 0 40 Q 0 0 40 0 L 400 0 Q 440 0 440 40 L 440 50 L 0 50 Z" fill="${aColor}" />
+        <path d="M 0 40 Q 0 0 40 0 L 400 0 Q 440 0 440 40 L 440 60 L 0 60 Z" fill="${aColor}" />
         <g transform="translate(30, 80)">
             ${generateSVGGrid(aColor, 54, 60, activityMap)}
         </g>
@@ -554,7 +554,7 @@ export const CalendarExportScreen = ({ navigation }: any) => {
 
                 <View style={{ width: 440 }}>
                     <View style={{ backgroundColor: canvasCardBg, borderRadius: 40, padding: 40, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 25, elevation: 15 }}>
-                        <View style={{ height: 25, width: '100%', borderTopLeftRadius: 40, borderTopRightRadius: 40, backgroundColor: accentColor, position: 'absolute', top: 0, left: 0 }} />
+                        <View style={{ height: 25, borderTopLeftRadius: 40, borderTopRightRadius: 40, backgroundColor: accentColor, position: 'absolute', top: 0, left: 0, right: 0 }} />
                         {renderCalendarGrid(accentColor)}
                     </View>
                 </View>
