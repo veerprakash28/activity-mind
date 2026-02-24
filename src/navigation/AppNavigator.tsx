@@ -14,6 +14,7 @@ import { ActivityBankScreen } from '../screens/ActivityBankScreen';
 import { AddActivityScreen } from '../screens/AddActivityScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { CalendarExportScreen } from '../screens/CalendarExportScreen';
+import { BrainstormScreen } from '../screens/BrainstormScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -113,12 +114,37 @@ const TabNavigator = () => {
             <Tab.Screen
                 name="Bank"
                 component={ActivityBankStack}
-                options={{
+                options={({ navigation }: any) => ({
                     tabBarIcon: ({ color, size }: { color: string; size: number }) => (
                         <MaterialCommunityIcons name="book-open-variant" size={size} color={color} />
                     ),
                     headerTitle: 'Activity Bank',
-                }}
+                    headerRight: () => (
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Brainstorm')}
+                            style={{
+                                marginRight: 16,
+                                backgroundColor: theme.colors.primary,
+                                paddingHorizontal: 10,
+                                paddingVertical: 6,
+                                borderRadius: 12,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 6,
+                                borderWidth: 2,
+                                borderColor: theme.colors.primary + '40',
+                                elevation: 4,
+                                shadowColor: theme.colors.primary,
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.3,
+                                shadowRadius: 4
+                            }}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                            <MaterialCommunityIcons name="robot" size={20} color="#FFF" />
+                        </TouchableOpacity>
+                    ),
+                })}
             />
             <Tab.Screen
                 name="Calendar"
@@ -170,6 +196,7 @@ export const AppNavigator = () => {
             headerStyle: { backgroundColor: theme.colors.surface },
             headerTintColor: theme.colors.text,
             headerTitleStyle: theme.typography.h3,
+            contentStyle: { backgroundColor: theme.colors.background }
         }}>
             <RootStack.Screen name="Tabs" component={TabNavigator} options={{ headerShown: false }} />
             <RootStack.Screen
@@ -188,6 +215,13 @@ export const AppNavigator = () => {
                 options={{
                     headerShown: false,
                     animation: 'slide_from_bottom',
+                }}
+            />
+            <RootStack.Screen
+                name="Brainstorm"
+                component={BrainstormScreen}
+                options={{
+                    title: 'AI Brainstorm',
                 }}
             />
         </RootStack.Navigator>

@@ -11,6 +11,7 @@ import { Button } from '../components/Button';
 import { StatusModal, StatusType } from '../components/StatusModal';
 
 export const ActivityBankScreen = ({ navigation }: any) => {
+    const [modalVisible, setModalVisible] = useState(false);
     const { theme, categories } = useAppContext();
     const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
     const [activities, setActivities] = useState<Activity[]>([]);
@@ -18,7 +19,6 @@ export const ActivityBankScreen = ({ navigation }: any) => {
     const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
     const [activeTab, setActiveTab] = useState<'built-in' | 'custom'>('built-in');
     const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
-    const [modalVisible, setModalVisible] = useState(false);
 
     // Status Modal State
     const [statusVisible, setStatusVisible] = useState(false);
@@ -248,5 +248,29 @@ const styles = StyleSheet.create({
         position: 'absolute', bottom: 20, right: 20, width: 56, height: 56, borderRadius: 28,
         alignItems: 'center', justifyContent: 'center', elevation: 6,
         shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.27, shadowRadius: 4.65,
+    },
+    aiEntry: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginHorizontal: 16,
+        marginTop: 16,
+        padding: 12,
+        borderRadius: 16,
+        borderWidth: 1,
+    },
+    aiIconContainer: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    headerAIButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
     },
 });
