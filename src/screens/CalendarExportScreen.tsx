@@ -12,7 +12,9 @@ import {
     Image,
     ActivityIndicator,
     Switch,
+    FlatList,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
@@ -55,6 +57,11 @@ export const CalendarExportScreen = ({ navigation }: any) => {
     const [activeTheme, setActiveTheme] = useState<UITheme>(EXPORT_UI_THEMES[0]);
     const [useBranding, setUseBranding] = useState(false);
 
+    // Interactive Icon States
+    const [customIconMap, setCustomIconMap] = useState<Record<string, string>>({});
+    const [pickerVisible, setPickerVisible] = useState(false);
+    const [editingActivityName, setEditingActivityName] = useState<string | null>(null);
+
     // Derived colors
     const primaryColor = useBranding ? theme.colors.primary : activeTheme.primaryColor;
     const accentColor = useBranding ? theme.colors.secondary : activeTheme.accentColor;
@@ -90,6 +97,43 @@ export const CalendarExportScreen = ({ navigation }: any) => {
         const d = new Date(currentDate);
         d.setMonth(d.getMonth() + 1);
         setCurrentDate(d);
+    };
+
+    const handlePickCustomIcon = (activityName: string) => {
+        setEditingActivityName(activityName);
+        setPickerVisible(true);
+    };
+
+    const pickImageFromLibrary = async () => {
+        if (!editingActivityName) return;
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 1,
+            base64: true,
+        });
+
+        if (!result.canceled && result.assets && result.assets[0].base64) {
+            const base64Uri = `data:image/png;base64,${result.assets[0].base64}`;
+            setCustomIconMap(prev => ({
+                ...prev,
+                [editingActivityName]: base64Uri
+            }));
+            setPickerVisible(false);
+            setEditingActivityName(null);
+        }
+    };
+
+    const handleEmojiSelect = (emoji: string) => {
+        if (!editingActivityName) return;
+        setCustomIconMap(prev => ({
+            ...prev,
+            [editingActivityName]: emoji
+        }));
+        setPickerVisible(false);
+        setEditingActivityName(null);
     };
 
     const handleExport = async () => {
@@ -208,6 +252,11 @@ export const CalendarExportScreen = ({ navigation }: any) => {
 
         let svg = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg width="1000" height="850" viewBox="0 0 1000 850" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <clipPath id="circleClip" clipPathUnits="objectBoundingBox">
+            <circle cx="0.5" cy="0.5" r="0.5" />
+        </clipPath>
+    </defs>
     <rect width="1000" height="850" fill="${bg}" />
 `;
 
@@ -231,7 +280,13 @@ export const CalendarExportScreen = ({ navigation }: any) => {
             <g transform="translate(0, ${i * 140})">
                 <rect width="400" height="120" rx="20" fill="${canvasCardBg}" stroke="${aColor}30" stroke-width="1.5" />
                 <circle cx="50" cy="60" r="30" fill="${aColor}15" />
-                <text x="50" y="60" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" dominant-baseline="central">${extractEmoji(acc.name) || '⭐'}</text>
+                ${customIconMap[acc.name] ? (
+                    customIconMap[acc.name].startsWith('data:image') ?
+                        `<image x="25" y="35" width="50" height="50" href="${customIconMap[acc.name]}" clip-path="url(#circleClip)" preserveAspectRatio="xMidYMid slice" />` :
+                        `<text x="50" y="60" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" dominant-baseline="central">${customIconMap[acc.name]}</text>`
+                ) : (
+                    `<text x="50" y="60" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" dominant-baseline="central">${extractEmoji(acc.name) || '⭐'}</text>`
+                )}
                 <text x="100" y="45" font-family="Arial, sans-serif" font-size="20" font-weight="800" fill="${canvasTextColor}" dominant-baseline="central">${stripEmoji(acc.name)}</text>
                 <text x="380" y="45" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="${aColor}" text-anchor="end" dominant-baseline="central">${acc.display_date || ''}</text>
                 <text x="100" y="75" font-family="Arial, sans-serif" font-size="14" fill="${canvasSecondaryTextColor}" dominant-baseline="central">${acc.description.substring(0, 120).replace(/[<>&"']/g, "")}...</text>
@@ -253,8 +308,17 @@ export const CalendarExportScreen = ({ navigation }: any) => {
         ${sortedGroupedActivities.slice(0, 5).map((acc, i) => `
         <g transform="translate(0, ${i * 105})">
             <rect x="0" y="0" width="8" height="85" fill="${aColor}" rx="4" />
-            <text x="25" y="25" font-family="Arial, sans-serif" font-size="24" font-weight="900" fill="${canvasTextColor}" dominant-baseline="central">${extractEmoji(acc.name) || ''} ${stripEmoji(acc.name)}</text>
-            <text x="25" y="50" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="${aColor}" dominant-baseline="central">${acc.display_date || ''}</text>
+            <g transform="translate(25, 25)">
+                ${customIconMap[acc.name] ? (
+                    customIconMap[acc.name].startsWith('data:image') ?
+                        `<image x="-15" y="-15" width="30" height="30" href="${customIconMap[acc.name]}" clip-path="url(#circleClip)" preserveAspectRatio="xMidYMid slice" />` :
+                        `<text x="0" y="0" font-family="Arial, sans-serif" font-size="24" font-weight="900" fill="${canvasTextColor}" dominant-baseline="central">${customIconMap[acc.name]}</text>`
+                ) : (
+                    `<text x="0" y="0" font-family="Arial, sans-serif" font-size="24" font-weight="900" fill="${canvasTextColor}" dominant-baseline="central">${extractEmoji(acc.name) || ''}</text>`
+                )}
+                <text x="35" y="0" font-family="Arial, sans-serif" font-size="24" font-weight="900" fill="${canvasTextColor}" dominant-baseline="central">${stripEmoji(acc.name)}</text>
+            </g>
+            <text x="25" y="60" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="${aColor}" dominant-baseline="central">${acc.display_date}</text>
             <text x="25" y="75" font-family="Arial, sans-serif" font-size="15" fill="${isDarkBackground ? '#CBD5E0' : '#4A5568'}" dominant-baseline="central">${acc.description.substring(0, 80).replace(/[<>&"']/g, "")}...</text>
         </g>`).join('')}
     </g>
@@ -286,17 +350,21 @@ export const CalendarExportScreen = ({ navigation }: any) => {
 
     <line x1="80" y1="520" x2="920" y2="520" stroke="${canvasBorderColor}" stroke-width="1.5" />
 
-    <g transform="translate(80, 560)">
-        ${sortedGroupedActivities.slice(0, 6).map((acc, i) => {
-                const row = Math.floor(i / 3);
-                const col = i % 3;
-                return `
-        <g transform="translate(${col * 280}, ${row * 100})">
-            <text x="0" y="20" font-family="Arial, sans-serif" font-size="13" font-weight="800" fill="${aColor}" dominant-baseline="central">${acc.display_date || ''}</text>
-            <text x="0" y="45" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="${canvasTextColor}" dominant-baseline="central">${extractEmoji(acc.name) || ''} ${stripEmoji(acc.name)}</text>
-            <text x="0" y="70" font-family="Arial, sans-serif" font-size="13" fill="${canvasSecondaryTextColor}" dominant-baseline="central">${acc.description.substring(0, 55).replace(/[<>&"']/g, "")}...</text>
-        </g>`;
-            }).join('')}
+    <g transform="translate(100, 520)">
+        ${sortedGroupedActivities.slice(0, 3).map((acc, i) => `
+        <g transform="translate(${i * 300}, 0)">
+            <text x="0" y="0" font-family="Arial, sans-serif" font-size="12" font-weight="800" fill="${aColor}" dominant-baseline="central">${acc.display_date}</text>
+            <g transform="translate(0, 25)">
+                ${customIconMap[acc.name] ? (
+                    customIconMap[acc.name].startsWith('data:image') ?
+                        `<image x="-10" y="-10" width="20" height="20" href="${customIconMap[acc.name]}" clip-path="url(#circleClip)" preserveAspectRatio="xMidYMid slice" />` :
+                        `<text x="0" y="0" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="${canvasTextColor}" dominant-baseline="central">${customIconMap[acc.name]}</text>`
+                ) : (
+                    `<text x="0" y="0" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="${canvasTextColor}" dominant-baseline="central">${extractEmoji(acc.name) || ''}</text>`
+                )}
+                <text x="25" y="0" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="${canvasTextColor}" dominant-baseline="central">${stripEmoji(acc.name)}</text>
+            </g>
+        </g>`).join('')}
     </g>
 
     <g transform="translate(500, 770)">
@@ -335,7 +403,13 @@ export const CalendarExportScreen = ({ navigation }: any) => {
         <g transform="translate(${col * cellW}, ${row * cellH + 45})">
             ${dayActivities && dayActivities.length > 0 ? `
             <circle cx="${cellW / 2}" cy="${cellH / 2}" r="${cellH / 2.5}" fill="${canvasCardBg}" stroke="${canvasBorderColor}" stroke-width="1" />
-            <text x="${cellW / 2}" y="${cellH / 2}" font-family="Arial, sans-serif" font-size="${cellH / 2.5}" text-anchor="middle" dominant-baseline="central" fill="${canvasTextColor}">${extractEmoji(dayActivities[0].name) || '⭐'}</text>
+            ${customIconMap[dayActivities[0].name] ? (
+                            customIconMap[dayActivities[0].name].startsWith('data:image') ?
+                                `<image x="${cellW / 2 - cellH / 2.5}" y="${cellH / 2 - cellH / 2.5}" width="${cellH / 1.25}" height="${cellH / 1.25}" href="${customIconMap[dayActivities[0].name]}" clip-path="url(#circleClip)" preserveAspectRatio="xMidYMid slice" />` :
+                                `<text x="${cellW / 2}" y="${cellH / 2}" font-family="Arial, sans-serif" font-size="${cellH / 2.5}" text-anchor="middle" dominant-baseline="central" fill="${canvasTextColor}">${customIconMap[dayActivities[0].name]}</text>`
+                        ) : (
+                            `<text x="${cellW / 2}" y="${cellH / 2}" font-family="Arial, sans-serif" font-size="${cellH / 2.5}" text-anchor="middle" dominant-baseline="central" fill="${canvasTextColor}">${extractEmoji(dayActivities[0].name) || '⭐'}</text>`
+                        )}
             ` : `
             <text x="${cellW / 2}" y="${cellH / 2}" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="${canvasTextColor}" text-anchor="middle" dominant-baseline="central">${dayNum}</text>
             `}
@@ -444,8 +518,14 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                                 {isCurrentMonth && (
                                     <>
                                         {dayActivities && dayActivities.length > 0 ? (
-                                            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: canvasCardBg, borderWidth: 1, borderColor: canvasBorderColor, alignItems: 'center', justifyContent: 'center' }}>
-                                                {extractEmoji(dayActivities[0].name) ? (
+                                            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: canvasCardBg, borderWidth: 1, borderColor: canvasBorderColor, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                                {customIconMap[dayActivities[0].name] ? (
+                                                    customIconMap[dayActivities[0].name].startsWith('data:image') ? (
+                                                        <Image source={{ uri: customIconMap[dayActivities[0].name] }} style={{ width: 44, height: 44 }} resizeMode="cover" />
+                                                    ) : (
+                                                        <Text style={{ fontSize: 22, color: canvasTextColor }}>{customIconMap[dayActivities[0].name]}</Text>
+                                                    )
+                                                ) : extractEmoji(dayActivities[0].name) ? (
                                                     <Text style={{ fontSize: 22, color: canvasTextColor }}>{extractEmoji(dayActivities[0].name)}</Text>
                                                 ) : (
                                                     <MaterialCommunityIcons name={getIconForCategory(dayActivities[0].category, dayActivities[0].name) as any} size={24} color={currentAccent} />
@@ -494,9 +574,19 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                         <Text style={{ fontSize: 38, fontWeight: '900', color: primaryColor, marginBottom: 30, textAlign: 'center' }}>Events</Text>
                         <View style={{ gap: 20 }}>
                             {sortedGroupedActivities.slice(0, 4).map((acc, i) => (
-                                <View key={i} style={{ flexDirection: 'row', backgroundColor: canvasCardBg, borderRadius: 20, padding: 24, alignItems: 'flex-start', borderWidth: 1.5, borderColor: accentColor + '30', gap: 20 }}>
-                                    <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: accentColor + '10', justifyContent: 'center', alignItems: 'center' }}>
-                                        {extractEmoji(acc.name) ? (
+                                <TouchableOpacity
+                                    key={i}
+                                    onPress={() => handlePickCustomIcon(acc.name)}
+                                    style={{ flexDirection: 'row', backgroundColor: canvasCardBg, borderRadius: 20, padding: 24, alignItems: 'flex-start', borderWidth: 1.5, borderColor: accentColor + '30', gap: 20 }}
+                                >
+                                    <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: accentColor + '10', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+                                        {customIconMap[acc.name] ? (
+                                            customIconMap[acc.name].startsWith('data:image') ? (
+                                                <Image source={{ uri: customIconMap[acc.name] }} style={{ width: 60, height: 60 }} resizeMode="cover" />
+                                            ) : (
+                                                <Text style={{ fontSize: 24 }}>{customIconMap[acc.name]}</Text>
+                                            )
+                                        ) : extractEmoji(acc.name) ? (
                                             <Text style={{ fontSize: 24 }}>{extractEmoji(acc.name)}</Text>
                                         ) : (
                                             <MaterialCommunityIcons name={getIconForCategory(acc.category, acc.name) as any} size={24} color={accentColor} />
@@ -509,7 +599,7 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                                         </View>
                                         <Text style={{ fontSize: 15, color: canvasSecondaryTextColor, lineHeight: 22 }} numberOfLines={3}>{acc.description}</Text>
                                     </View>
-                                </View>
+                                </TouchableOpacity>
                             ))}
                         </View>
                     </View>
@@ -538,16 +628,26 @@ export const CalendarExportScreen = ({ navigation }: any) => {
 
                     <View style={{ marginTop: 60 }}>
                         {sortedGroupedActivities.slice(0, 5).map((acc, i) => (
-                            <View key={i} style={{ marginBottom: 30, borderLeftWidth: 8, borderColor: accentColor, paddingLeft: 25 }}>
+                            <TouchableOpacity
+                                key={i}
+                                onPress={() => handlePickCustomIcon(acc.name)}
+                                style={{ marginBottom: 30, borderLeftWidth: 8, borderColor: accentColor, paddingLeft: 25 }}
+                            >
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                                    {extractEmoji(acc.name) && (
+                                    {customIconMap[acc.name] ? (
+                                        customIconMap[acc.name].startsWith('data:image') ? (
+                                            <Image source={{ uri: customIconMap[acc.name] }} style={{ width: 24, height: 24, borderRadius: 4 }} />
+                                        ) : (
+                                            <Text style={{ fontSize: 24 }}>{customIconMap[acc.name]}</Text>
+                                        )
+                                    ) : extractEmoji(acc.name) ? (
                                         <Text style={{ fontSize: 24 }}>{extractEmoji(acc.name)}</Text>
-                                    )}
+                                    ) : null}
                                     <Text style={{ fontSize: 24, fontWeight: '900', color: canvasTextColor }}>{stripEmoji(acc.name)}</Text>
                                 </View>
                                 <Text style={{ fontSize: 18, fontWeight: '700', color: accentColor, marginTop: 4 }}>{acc.display_date}</Text>
                                 <Text style={{ fontSize: 16, color: canvasSecondaryTextColor, marginTop: 6, lineHeight: 22 }} numberOfLines={2}>{acc.description}</Text>
-                            </View>
+                            </TouchableOpacity>
                         ))}
                     </View>
                 </View>
@@ -584,17 +684,29 @@ export const CalendarExportScreen = ({ navigation }: any) => {
             <View style={{ width: '100%', height: 1.5, backgroundColor: '#F0F4F8', marginVertical: 20 }} />
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 40, justifyContent: 'center' }}>
                 {sortedGroupedActivities.slice(0, 6).map((acc, i) => (
-                    <View key={i} style={{ width: '28%', marginBottom: 10 }}>
+                    <TouchableOpacity
+                        key={i}
+                        onPress={() => handlePickCustomIcon(acc.name)}
+                        style={{ width: '28%', marginBottom: 10 }}
+                    >
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                             <Text style={{ fontSize: 13, color: accentColor, fontWeight: '800' }}>{acc.display_date}</Text>
                             <View style={{ flex: 1, height: 1, backgroundColor: accentColor + '30' }} />
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            {extractEmoji(acc.name) && <Text style={{ fontSize: 16 }}>{extractEmoji(acc.name)}</Text>}
+                            {customIconMap[acc.name] ? (
+                                customIconMap[acc.name].startsWith('data:image') ? (
+                                    <Image source={{ uri: customIconMap[acc.name] }} style={{ width: 16, height: 16, borderRadius: 8 }} resizeMode="cover" />
+                                ) : (
+                                    <Text style={{ fontSize: 16 }}>{customIconMap[acc.name]}</Text>
+                                )
+                            ) : extractEmoji(acc.name) ? (
+                                <Text style={{ fontSize: 16 }}>{extractEmoji(acc.name)}</Text>
+                            ) : null}
                             <Text style={{ fontSize: 18, fontWeight: '800', color: canvasTextColor }}>{stripEmoji(acc.name)}</Text>
                         </View>
                         <Text style={{ fontSize: 13, color: canvasSecondaryTextColor, marginTop: 4, lineHeight: 18 }}>{acc.description}</Text>
-                    </View>
+                    </TouchableOpacity>
                 ))}
             </View>
             <View style={{ marginTop: 'auto', alignItems: 'center', paddingTop: 80 }}>
@@ -768,7 +880,58 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                 title={statusTitle}
                 message={statusMessage}
                 onClose={() => setStatusVisible(false)}
+                confirmLabel="Great!"
             />
+
+            {/* Premium Icon/Emoji Picker Modal */}
+            <Modal
+                visible={pickerVisible}
+                animationType="slide"
+                transparent
+                onRequestClose={() => setPickerVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={[theme.typography.h3, { color: theme.colors.text }]}>Pick an Icon</Text>
+                            <TouchableOpacity onPress={() => setPickerVisible(false)}>
+                                <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={[theme.typography.body2, { color: theme.colors.textSecondary, marginBottom: 20 }]}>
+                            Select a premium sticker or upload your own image for "{editingActivityName}"
+                        </Text>
+
+                        <TouchableOpacity
+                            style={[styles.uploadButton, { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary + '10' }]}
+                            onPress={pickImageFromLibrary}
+                        >
+                            <Ionicons name="image-outline" size={24} color={theme.colors.primary} />
+                            <Text style={[theme.typography.body1, { color: theme.colors.primary, marginLeft: 10, fontWeight: '600' }]}>
+                                Upload Custom Image
+                            </Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.divider} />
+
+                        <FlatList
+                            data={['🎯', '🍕', '🎮', '💡', '🧘', '🎨', '🔥', '👟', '🍿', '🎸', '🧗', '🧁', '🏆', '💻', '🚲', '🌿', '🎤', '🎬', '🏸', '🍔', '🍦', '🎲', '🏖️', '⛰️', '🛶', '🎭', '🧶', '🪴']}
+                            numColumns={4}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={styles.emojiItem}
+                                    onPress={() => handleEmojiSelect(item)}
+                                >
+                                    <Text style={{ fontSize: 32 }}>{item}</Text>
+                                </TouchableOpacity>
+                            )}
+                            keyExtractor={item => item}
+                            columnWrapperStyle={styles.emojiRow}
+                        />
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -809,4 +972,34 @@ const styles = StyleSheet.create({
     modalContent: { width: '96%', height: '88%', padding: 24, borderRadius: 36 },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
     modalScrollArea: { flex: 1, borderRadius: 20, overflow: 'hidden', padding: 5 },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    divider: {
+        height: 1,
+        backgroundColor: '#E2E8F0',
+        marginVertical: 20,
+    },
+    uploadButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 2,
+        borderStyle: 'dashed',
+        justifyContent: 'center',
+    },
+    emojiRow: {
+        justifyContent: 'space-between',
+        paddingHorizontal: 10,
+    },
+    emojiItem: {
+        width: 70,
+        height: 70,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 10,
+    },
 });
