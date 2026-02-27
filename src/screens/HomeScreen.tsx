@@ -7,18 +7,21 @@ import { StatCard } from '../components/StatCard';
 import { FilterChip } from '../components/FilterChip';
 import { Button } from '../components/Button';
 import { ActivityCard } from '../components/ActivityCard';
+import { TaskItem } from '../components/TaskItem';
 import { ActivityDetailModal } from '../components/ActivityDetailModal';
 import { UpdateModal } from '../components/UpdateModal';
-import { getActivityStats, getUpcomingActivity, Activity, ActivityHistory, getDb, normalizeDate } from '../database/database';
-import { VersionService, UpdateInfo } from '../utils/VersionService';
+import { getActivityStats, getUpcomingActivity, Activity, ActivityHistory, getDb, normalizeDate, getPendingTasks, PersonalTask, updateTask, deleteTask } from '../database/database';
+import { NotificationService } from '../utils/NotificationService';
+import { VersionService } from '../utils/VersionService';
 
 export const HomeScreen = () => {
-    const { theme, organization, preferences, categories: dynamicCategories, updateInfo, checkUpdate } = useAppContext();
+    const { theme, organization, preferences, categories: dynamicCategories, updateInfo, checkUpdate, pendingTasksCount, refreshTasksCount } = useAppContext();
     const navigation = useNavigation();
 
     const [refreshing, setRefreshing] = useState(false);
     const [stats, setStats] = useState({ completedThisMonth: 0 });
     const [upcoming, setUpcoming] = useState<(Activity & ActivityHistory) | null>(null);
+    const [pendingTasks, setPendingTasks] = useState<PersonalTask[]>([]);
     const [modalVisible, setModalVisible] = useState(false);
     const [isUpcomingFavorite, setIsUpcomingFavorite] = useState(false);
 
@@ -30,7 +33,7 @@ export const HomeScreen = () => {
             const fetchedStats = await getActivityStats();
             setStats(fetchedStats);
 
-            // Fetch upcoming with all activity fields (explicit select to avoid name collisions)
+            // Fetch upcoming with all activity fields
             const db = await getDb();
             const now = normalizeDate(new Date());
             const next = await db.getFirstAsync<Activity & ActivityHistory>(
@@ -48,6 +51,10 @@ export const HomeScreen = () => {
             }
 
             setUpcoming(next ?? null);
+
+            // Fetch tasks
+            const tasks = await getPendingTasks(3);
+            setPendingTasks(tasks);
         } catch (e) {
             console.error("Failed to load dashboard data", e);
         }
@@ -127,25 +134,9 @@ export const HomeScreen = () => {
                     <StatCard title="Engagement" value={engagementScore + "%"} icon="lightning-bolt" color={theme.colors.warning} />
                 </View>
 
-                {/* Primary CTA */}
-                <View style={[styles.ctaContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, ...theme.shadows.sm }]}>
-                    <View style={styles.ctaTextContainer}>
-                        <Text style={[theme.typography.h2, { color: theme.colors.text }]}>Find the perfect activity</Text>
-                        <Text style={[theme.typography.body2, { color: theme.colors.textSecondary, marginTop: theme.spacing.xs, marginBottom: theme.spacing.md }]}>
-                            Recommendations based on your unique team profile
-                        </Text>
-                    </View>
-                    <Button
-                        title="Generate Activity"
-                        icon={<MaterialCommunityIcons name="creation" size={20} color={theme.colors.white} />}
-                        // @ts-ignore
-                        onPress={() => navigation.navigate('Generate')}
-                        size="large"
-                    />
-                </View>
 
                 {/* Upcoming */}
-                {upcoming ? (
+                {upcoming && (
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
                             <Text style={[theme.typography.h3, { color: theme.colors.text }]}>Upcoming</Text>
@@ -162,7 +153,58 @@ export const HomeScreen = () => {
                             onPress={() => setModalVisible(true)}
                         />
                     </View>
-                ) : null}
+                )}
+
+                {/* My Tasks */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={[theme.typography.h3, { color: theme.colors.text }]}>
+                            {"My Tasks " + (pendingTasksCount > 0 ? "(" + pendingTasksCount + ")" : "")}
+                        </Text>
+                        <TouchableOpacity onPress={() => (navigation as any).navigate('Tasks')}>
+                            <Text style={[theme.typography.caption, { color: theme.colors.primary, fontWeight: '700' }]}>VIEW ALL</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {pendingTasks.length > 0 ? (
+                        pendingTasks.map(task => (
+                            <TaskItem
+                                key={task.id}
+                                task={task}
+                                onToggle={async () => {
+                                    const newStatus = task.status === 'pending' ? 'completed' : 'pending';
+                                    if (newStatus === 'completed' && task.notification_id) {
+                                        await NotificationService.cancelTaskReminder(task.notification_id);
+                                        await updateTask(task.id, { status: 'completed', notification_id: null });
+                                    } else {
+                                        await updateTask(task.id, { status: newStatus as any });
+                                    }
+                                    loadData();
+                                    refreshTasksCount();
+                                }}
+                                onDelete={async () => {
+                                    if (task.notification_id) {
+                                        await NotificationService.cancelTaskReminder(task.notification_id);
+                                    }
+                                    await deleteTask(task.id);
+                                    loadData();
+                                    refreshTasksCount();
+                                }}
+                                onEdit={() => (navigation as any).navigate('Tasks', { editTaskId: task.id })}
+                            />
+                        ))
+                    ) : (
+                        <TouchableOpacity
+                            style={[styles.emptyTaskCta, { borderColor: theme.colors.border + '40' }]}
+                            onPress={() => (navigation as any).navigate('Tasks')}
+                        >
+                            <MaterialCommunityIcons name="plus-circle-outline" size={24} color={theme.colors.textSecondary} />
+                            <Text style={[theme.typography.body2, { color: theme.colors.textSecondary, marginLeft: 8 }]}>
+                                No pending tasks. Add a planning task?
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
 
                 {/* Quick Filters */}
                 <View style={styles.section}>
@@ -221,25 +263,12 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     filterWrap: { flexDirection: 'row', flexWrap: 'wrap' },
-    exportCard: {
+    emptyTaskCta: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
-        borderRadius: 20,
+        borderRadius: 16,
         borderWidth: 1,
-        marginBottom: 32,
-    },
-    exportIconBox: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: '#FFF',
-        alignItems: 'center',
-        justifyContent: 'center',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        borderStyle: 'dashed',
     },
 });

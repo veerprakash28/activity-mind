@@ -34,6 +34,19 @@ export interface ActivityHistory {
     created_at: string;
 }
 
+export type TaskStatus = 'pending' | 'completed' | 'blocked' | 'review' | 'discussion';
+
+export interface PersonalTask {
+    id: number;
+    title: string;
+    description: string | null;
+    notes: string | null;
+    reminder_time: string | null; // ISO
+    status: TaskStatus;
+    notification_id: string | null;
+    created_at: string;
+}
+
 export interface Favorite {
     id: number;
     activity_id: number;
@@ -94,11 +107,22 @@ export const initDb = async () => {
       created_at TEXT NOT NULL,
       FOREIGN KEY (activity_id) REFERENCES activities(id)
     );
-
+    
     CREATE TABLE IF NOT EXISTS generation_log (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      generated_at TEXT NOT NULL,
-      activity_id INTEGER NOT NULL
+      "generated_at" TEXT NOT NULL,
+      activity_id INTEGER NOT NULL,
+      FOREIGN KEY (activity_id) REFERENCES activities(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      "reminder_time" TEXT,
+      status TEXT DEFAULT 'pending',
+      notification_id TEXT,
+      "created_at" TEXT NOT NULL
     );
   `);
 
@@ -116,10 +140,10 @@ export const initDb = async () => {
             await db.execAsync(`ALTER TABLE activity_history ADD COLUMN notification_id TEXT;`);
         }
 
-        // Migration: Add recurring_pattern to activities
-        const hasRecurringPattern = tableInfo.some(col => col.name === 'recurring_pattern');
-        if (!hasRecurringPattern) {
-            await db.execAsync(`ALTER TABLE activities ADD COLUMN recurring_pattern TEXT;`);
+        const tasksInfo = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(tasks)`);
+        const hasNotes = tasksInfo.some(col => col.name === 'notes');
+        if (!hasNotes) {
+            await db.execAsync(`ALTER TABLE tasks ADD COLUMN notes TEXT;`);
         }
     } catch (e) {
         console.error("Migration failed", e);
@@ -384,7 +408,7 @@ export const getFavorites = async () => {
 export const logGeneration = async (activityId: number) => {
     const db = await getDb();
     await db.runAsync(
-        `INSERT INTO generation_log (generated_at, activity_id) VALUES (?, ?)`,
+        'INSERT INTO generation_log ("generated_at", activity_id) VALUES (?, ?)',
         [new Date().toISOString(), activityId]
     );
 };
@@ -395,7 +419,7 @@ export const getGenerationCountThisMonth = async () => {
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
     const result = await db.getFirstAsync<{ count: number }>(
-        `SELECT COUNT(*) as count FROM generation_log WHERE generated_at >= ?`,
+        'SELECT COUNT(*) as count FROM generation_log WHERE "generated_at" >= ?',
         [firstDayOfMonth]
     );
     return result?.count || 0;
@@ -563,4 +587,49 @@ export const updateActivityRecurringPattern = async (activityId: number, pattern
         'UPDATE activities SET recurring_pattern = ? WHERE id = ?',
         [pattern, activityId]
     );
+};
+
+// Task Management Helpers
+export const getTasks = async (): Promise<PersonalTask[]> => {
+    const db = await getDb();
+    return db.getAllAsync<PersonalTask>(`SELECT * FROM tasks ORDER BY status DESC, created_at DESC`);
+};
+
+export const getPendingTasks = async (limit: number = 3): Promise<PersonalTask[]> => {
+    const db = await getDb();
+    return db.getAllAsync<PersonalTask>(`SELECT * FROM tasks WHERE status != 'completed' ORDER BY created_at ASC LIMIT ?`, [limit]);
+};
+
+export const getPendingTasksCount = async (): Promise<number> => {
+    const db = await getDb();
+    const result = await db.getFirstAsync<{ count: number }>(`SELECT COUNT(*) as count FROM tasks WHERE status != 'completed'`);
+    return result?.count || 0;
+};
+
+export const addTask = async (title: string, description: string | null, reminderTime: string | null, notes: string | null = null, status: TaskStatus = 'pending'): Promise<number> => {
+    const db = await getDb();
+    const result = await db.runAsync(
+        'INSERT INTO tasks (title, description, notes, "reminder_time", status, "created_at") VALUES (?, ?, ?, ?, ?, ?)',
+        [title, description, notes, reminderTime, status, new Date().toISOString()]
+    );
+    return result.lastInsertRowId;
+};
+
+export const updateTask = async (id: number, updates: Partial<PersonalTask>) => {
+    const db = await getDb();
+
+    // Explicitly handle fields that need quoting or specific naming
+    const fields = Object.keys(updates).map(key => {
+        if (key === 'reminder_time') return '"reminder_time" = ?';
+        if (key === 'created_at') return '"created_at" = ?';
+        return `"${key}" = ?`;
+    }).join(', ');
+
+    const values = [...Object.values(updates), id];
+    await db.runAsync(`UPDATE tasks SET ${fields} WHERE id = ?`, values);
+};
+
+export const deleteTask = async (id: number) => {
+    const db = await getDb();
+    await db.runAsync(`DELETE FROM tasks WHERE id = ?`, [id]);
 };

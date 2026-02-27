@@ -35,6 +35,8 @@ interface AppContextData {
     setMonthlyTarget: (target: number) => Promise<void>;
     setRemindersEnabled: (enabled: boolean) => Promise<void>;
     setReminderTime: (time: string) => Promise<void>;
+    pendingTasksCount: number;
+    refreshTasksCount: () => Promise<void>;
 
     // Custom Colors
     customColors: CustomColors;
@@ -83,6 +85,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const [customColors, setCustomColorsState] = useState<CustomColors>({});
     const [categories, setCategories] = useState<string[]>([]);
     const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+    const [pendingTasksCount, setPendingTasksCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
 
     // Load initial data
@@ -117,6 +120,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 // Load initial categories
                 const cats = await getUniqueCategories();
                 setCategories(cats);
+
+                // Load initial task count
+                // We need to import getPendingTasksCount from database
+                const { getPendingTasksCount } = require('../database/database');
+                const count = await getPendingTasksCount();
+                setPendingTasksCount(count);
 
             } catch (e) {
                 console.error('Failed to load app data', e);
@@ -195,6 +204,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         await refreshCategories();
     };
 
+    const refreshTasksCount = async () => {
+        const { getPendingTasksCount } = require('../database/database');
+        const count = await getPendingTasksCount();
+        setPendingTasksCount(count);
+    };
+
     const checkUpdate = async () => {
         const info = await VersionService.checkForUpdates();
         if (info?.hasUpdate) {
@@ -234,7 +249,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 setRemindersEnabled,
                 setReminderTime,
                 updateInfo,
-                checkUpdate
+                checkUpdate,
+                pendingTasksCount,
+                refreshTasksCount
             }}
         >
             {children}

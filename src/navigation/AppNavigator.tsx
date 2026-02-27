@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, StatusBar, Platform, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StatusBar, Platform, StyleSheet, Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -15,6 +15,7 @@ import { AddActivityScreen } from '../screens/AddActivityScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { CalendarExportScreen } from '../screens/CalendarExportScreen';
 import { BrainstormScreen } from '../screens/BrainstormScreen';
+import { TasksScreen } from '../screens/TasksScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -38,7 +39,7 @@ const ActivityBankStack = () => {
 };
 
 const TabNavigator = () => {
-    const { theme, updateInfo } = useAppContext();
+    const { theme, updateInfo, pendingTasksCount } = useAppContext();
 
     return (
         <Tab.Navigator
@@ -72,18 +73,33 @@ const TabNavigator = () => {
                     headerTitle: 'Activity Mind',
                     headerTitleAlign: 'left' as const,
                     headerRight: () => (
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('Settings')}
-                            style={{ marginRight: 16 }}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                            <View>
-                                <MaterialCommunityIcons name="cog-outline" size={24} color={theme.colors.iconDefault} />
-                                {updateInfo && (
-                                    <View style={[styles.dot, { backgroundColor: theme.colors.error || '#EF4444' }]} />
-                                )}
-                            </View>
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 16 }}>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Tasks')}
+                                style={{ marginRight: 16 }}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            >
+                                <View>
+                                    <MaterialCommunityIcons name="clipboard-text-outline" size={24} color={theme.colors.iconDefault} />
+                                    {pendingTasksCount > 0 && (
+                                        <View style={[styles.badge, { backgroundColor: theme.colors.primary }]}>
+                                            <Text style={styles.badgeText}>{pendingTasksCount > 9 ? '9+' : pendingTasksCount}</Text>
+                                        </View>
+                                    )}
+                                </View>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Settings')}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            >
+                                <View>
+                                    <MaterialCommunityIcons name="cog-outline" size={24} color={theme.colors.iconDefault} />
+                                    {updateInfo && (
+                                        <View style={[styles.dot, { backgroundColor: theme.colors.error || '#EF4444' }]} />
+                                    )}
+                                </View>
+                            </TouchableOpacity>
+                        </View>
                     ),
                 })}
             />
@@ -224,6 +240,13 @@ export const AppNavigator = () => {
                     title: 'AI Brainstorm',
                 }}
             />
+            <RootStack.Screen
+                name="Tasks"
+                component={TasksScreen}
+                options={{
+                    title: 'My Tasks',
+                }}
+            />
         </RootStack.Navigator>
     );
 };
@@ -238,5 +261,24 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         borderWidth: 1.5,
         borderColor: '#FFF',
-    }
+    },
+    badge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        minWidth: 16,
+        height: 16,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 2,
+        borderWidth: 1.5,
+        borderColor: '#FFF',
+    },
+    badgeText: {
+        color: '#FFF',
+        fontSize: 9,
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
 });

@@ -137,5 +137,50 @@ export const NotificationService = {
         } catch (error) {
             // Silently fail if ID is invalid or already fired
         }
+    },
+
+    /**
+     * Schedule a one-off reminder for a personal task
+     */
+    scheduleTaskReminder: async (taskId: number, title: string, timeIso: string) => {
+        if (!_enabled) return null;
+
+        const triggerDate = new Date(timeIso);
+        const now = new Date();
+
+        if (triggerDate <= now) return null;
+
+        try {
+            const notificationId = await Notifications.scheduleNotificationAsync({
+                content: {
+                    title: "Task Reminder 📝",
+                    body: title,
+                    data: { taskId, type: 'task' },
+                    sound: true,
+                    priority: Notifications.AndroidNotificationPriority.HIGH,
+                },
+                trigger: {
+                    type: Notifications.SchedulableTriggerInputTypes.DATE,
+                    date: triggerDate,
+                } as any,
+            });
+
+            return notificationId;
+        } catch (error) {
+            console.error("[NotificationService] Failed to schedule task notification:", error);
+            return null;
+        }
+    },
+
+    /**
+     * Cancel a task reminder
+     */
+    cancelTaskReminder: async (notificationId: string) => {
+        if (!notificationId) return;
+        try {
+            await Notifications.cancelScheduledNotificationAsync(notificationId);
+        } catch (error) {
+            // Skip
+        }
     }
 };

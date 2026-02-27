@@ -11,6 +11,7 @@ import { initDb } from './src/database/database';
 import { NotificationService } from './src/utils/NotificationService';
 import { CalendarExportScreen } from './src/screens/CalendarExportScreen';
 import { CalendarExportService } from './src/utils/CalendarExportService';
+import { NotificationHandler } from './src/components/NotificationHandler';
 
 const MainApp = () => {
   const { theme, themeMode, isFirstLaunch, refreshCategories, preferences } = useAppContext();
@@ -71,6 +72,7 @@ const MainApp = () => {
       fonts: DefaultTheme.fonts
     }}>
       <StatusBar style={themeMode === 'dark' ? 'light' : 'dark'} />
+      <NotificationHandler />
       {isFirstLaunch ? <OnboardingNavigator /> : <AppNavigator />}
     </NavigationContainer>
   );
