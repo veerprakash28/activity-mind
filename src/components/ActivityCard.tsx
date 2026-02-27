@@ -58,9 +58,13 @@ export const ActivityCard = ({ activity, onPress, expanded = false, isFavorite =
         >
             {/* Header */}
             <View style={styles.header}>
-                <View style={[styles.categoryBadge, { backgroundColor: badgeColor + '20' }]}>
+                <View style={[styles.categoryBadge, { backgroundColor: badgeColor + '20', flexShrink: 1 }]}>
                     <MaterialCommunityIcons name={getCategoryIcon(activity.category)} size={16} color={badgeColor} style={{ marginRight: 4 }} />
-                    <Text style={[theme.typography.caption, { color: badgeColor, fontWeight: '700' }]}>
+                    <Text
+                        style={[theme.typography.caption, { color: badgeColor, fontWeight: '700' }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                    >
                         {activity.category.toUpperCase()}
                     </Text>
                     {isFavorite && !hideFavoriteIcon && heartPosition === 'header' && (
@@ -69,7 +73,7 @@ export const ActivityCard = ({ activity, onPress, expanded = false, isFavorite =
                 </View>
                 <View style={styles.headerRight}>
                     <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
-                        {activity.duration}
+                        {activity.duration || 'Flexible'}
                     </Text>
                 </View>
             </View>
@@ -90,19 +94,19 @@ export const ActivityCard = ({ activity, onPress, expanded = false, isFavorite =
                 <View style={styles.metaItem}>
                     <MaterialCommunityIcons name="account-multiple" size={16} color={theme.colors.textSecondary} />
                     <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginLeft: 4 }]}>
-                        {activity.min_employees}-{activity.max_employees}
+                        {activity.min_employees > 0 ? `${activity.min_employees}-${activity.max_employees}` : 'Any size'}
                     </Text>
                 </View>
                 <View style={styles.metaItem}>
                     <MaterialCommunityIcons name="currency-usd" size={16} color={theme.colors.textSecondary} />
                     <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginLeft: 4 }]}>
-                        {activity.estimated_cost} Budget
+                        {activity.estimated_cost && !activity.estimated_cost.includes('$') ? `${activity.estimated_cost} Budget` : 'Low Budget'}
                     </Text>
                 </View>
                 <View style={styles.metaItem}>
                     <MaterialCommunityIcons name={activity.indoor_outdoor === 'Indoor' ? 'home-variant' : activity.indoor_outdoor === 'Outdoor' ? 'tree' : 'map-marker-multiple'} size={16} color={theme.colors.textSecondary} />
                     <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginLeft: 4 }]}>
-                        {activity.indoor_outdoor}
+                        {activity.indoor_outdoor || 'Anywhere'}
                     </Text>
                 </View>
                 {isFavorite && !hideFavoriteIcon && heartPosition === 'bottom-right' && (

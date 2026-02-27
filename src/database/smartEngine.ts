@@ -1,4 +1,5 @@
 import { getDb, Activity, getRecentHistory, logGeneration } from './database';
+import { getGeminiModel, SYSTEM_PROMPT } from '../config/aiConfig';
 
 export interface FilterParams {
     category?: string;
@@ -17,6 +18,7 @@ export interface AIChatResponse {
     message: string;
     suggestedActivities: Activity[];
     contextUpdate?: Partial<FilterParams>;
+    engine?: 'gemini' | 'heuristic';
 }
 
 export const generateActivities = async (
@@ -139,7 +141,7 @@ export const processAIChat = async (
     const input = userInput.toLowerCase();
     const db = await getDb();
 
-    // 1. Keyword Extraction (Simulating NLP)
+    // 1. Keyword Extraction (Simulating NLP - needed for fallback & context retrieval)
     const isRemote = input.includes('remote') || input.includes('online') || input.includes('virtual');
     const isBudgetLow = input.includes('cheap') || input.includes('free') || input.includes('low budget');
     const isShort = input.includes('short') || input.includes('quick') || input.includes('15 min');
@@ -147,122 +149,113 @@ export const processAIChat = async (
     const isProductive = input.includes('productive') || input.includes('learn') || input.includes('training') || input.includes('work');
     const isQuiet = input.includes('quiet') || input.includes('calm') || input.includes('wellness') || input.includes('focus');
 
-    // 2. Load DB for matching (simulated brainstorming)
+    // 2. Load DB for Context Retrieval
     const allActivities = await db.getAllAsync<Activity>(`SELECT * FROM activities`);
 
-    // 3. Heuristic Filtering & Keyword Scoring
+    // 3. Heuristic Filtering & Keyword Scoring (To find relevant "Base Activities")
     let matchesWithScore = allActivities.map(a => {
         let score = 0;
-
-        // Literal keyword matches (High Weight)
         const keywords = input.split(/\s+/).filter(w => w.length >= 2);
         keywords.forEach(word => {
             if (a.name.toLowerCase().includes(word)) score += 10;
             if (a.description.toLowerCase().includes(word)) score += 5;
-            if (a.category.toLowerCase().includes(word)) score += 3;
         });
-
-        // Intent-based matches (Medium Weight)
         if (isRemote && a.remote_compatible === 1) score += 5;
         if (isBudgetLow && a.estimated_cost === 'Low') score += 5;
-        if (isShort && (a.duration === '15 min' || a.duration === '30 min')) score += 5;
-        if (isActive && (a.category.toLowerCase().includes('well-being') || a.name.toLowerCase().includes('physical') || a.category === 'Team Bonding')) score += 5;
-        if (isProductive && (a.category === 'Training' || a.category === 'Recognition')) score += 5;
-        if (isQuiet && (a.category === 'Wellness' || a.category === 'Recognition')) score += 5;
-
-        // Penalty for incompatibility
-        if (isRemote && a.remote_compatible === 0) score -= 100; // Still filter strictly for remote
-
         return { activity: a, score };
     });
 
-    // Sort by score and filter out non-matches (unless we have very few results)
-    let filteredMatches = matchesWithScore
+    const contextActivities = matchesWithScore
         .filter(m => m.score > 0)
         .sort((a, b) => b.score - a.score)
+        .slice(0, 2)
         .map(m => m.activity);
 
-    // Fallback if no specific keyword matches (broad matching)
-    if (filteredMatches.length === 0) {
-        filteredMatches = allActivities.filter(a => {
-            if (isRemote && a.remote_compatible === 0) return false;
-            return true;
-        }).slice(0, 3);
-    }
+    // --- REAL AI INTEGRATION (GEMINI) ---
+    try {
+        const model = getGeminiModel();
 
-    let matches = filteredMatches;
+        // Limit history to last 4 messages to save tokens
+        const recentHistory = history.slice(-4);
+        const historyStr = recentHistory.length > 0
+            ? `\nHISTORY:\n${JSON.stringify(recentHistory)}`
+            : "";
 
-    // 4. Adapt/Transform to feel "Generative"
-    const suggested = matches.sort(() => Math.random() - 0.5).slice(0, 2).map(act => {
-        let adapted = { ...act };
+        const orgStr = `ORG: ${organization?.industry || 'Gen'}, ${organization?.companyName || 'Gen'}`;
+        const fullPrompt = `${SYSTEM_PROMPT}\n${orgStr}\nCTX: ${JSON.stringify(contextActivities.map(a => ({ n: a.name, d: a.description })))}${historyStr}\nPROMPT: ${userInput}`;
 
-        // Transform based on keywords
-        if (isRemote && act.remote_compatible === 0) {
-            adapted.name = `[Virtual] ${act.name}`;
-            adapted.description = `A remote-adapted version of ${act.name}. ${act.description}`;
-            adapted.remote_compatible = 1;
-            try {
-                const steps = JSON.parse(act.steps);
-                adapted.steps = JSON.stringify([
-                    "Hop on a video call (Zoom/Teams/Meet).",
-                    ...steps.map((s: string) => `(Virtual Adaption) ${s}`),
-                    "Share screenshots of the results in your team chat."
-                ]);
-            } catch (e) { }
-        } else if (isBudgetLow && act.estimated_cost !== 'Low') {
-            adapted.name = `[Budget-Friendly] ${act.name}`;
-            adapted.description = `A cost-optimized variation of ${act.name}. ${act.description}`;
-            adapted.estimated_cost = 'Low';
-        } else if (isActive && !act.name.toLowerCase().includes('energetic')) {
-            adapted.name = `[High Energy] ${act.name}`;
-            adapted.description = `An amped-up, physical version of ${act.name}. ${act.description}`;
-        } else if (isProductive) {
-            adapted.name = `[Upskill] ${act.name}`;
-            adapted.description = `Focusing on team growth: ${adapted.description}`;
+        const result = await model.generateContent(fullPrompt);
+        const responseText = result.response.text();
+
+        // Parse JSON from Gemini (cleaning up potential markdown markers)
+        const jsonStr = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const aiResponse = JSON.parse(jsonStr);
+
+        // Sanitize response to ensure matching types and sensible defaults
+        const sanitizedActivities = aiResponse.suggestedActivities.map((act: any) => {
+            // Fix cost if AI returns "$0" or weird strings
+            let cost = act.estimated_cost || 'Low';
+            if (cost.includes('$') || cost.toLowerCase().includes('0')) {
+                cost = 'Low';
+            }
+
+            return {
+                ...act,
+                id: Date.now() + Math.random(), // Dynamic ID for draft recognition
+                category: act.category || 'Team Bonding',
+                estimated_cost: cost,
+                min_employees: Number(act.min_employees) || 2,
+                max_employees: Number(act.max_employees) || 20,
+                duration: act.duration || '30 min',
+                indoor_outdoor: act.indoor_outdoor || 'Indoor',
+                remote_compatible: Number(act.remote_compatible) || 0,
+                steps: typeof act.steps === 'string' ? act.steps : JSON.stringify(act.steps || []),
+                materials: typeof act.materials === 'string' ? act.materials : JSON.stringify(act.materials || [])
+            };
+        });
+
+
+        return {
+            message: aiResponse.message,
+            suggestedActivities: sanitizedActivities,
+            engine: 'gemini'
+        };
+
+    } catch (e) {
+        console.warn("Real AI failed, falling back to heuristic engine:", e);
+
+        // 4. FALLBACK: Simulated "Generative" Engine (Previous implementation)
+        let filteredMatches = matchesWithScore
+            .filter(m => m.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .map(m => m.activity);
+
+        if (filteredMatches.length === 0) {
+            filteredMatches = allActivities.filter(a => !(isRemote && a.remote_compatible === 0)).slice(0, 2);
         }
 
-        // Add Industry Polish
-        const industry = organization?.industry?.toLowerCase() || 'office';
-        if (industry.includes('tech') || industry.includes('engineer')) {
-            adapted.name = `[Engineering Corner] ${adapted.name}`;
-        } else if (industry.includes('creative') || industry.includes('design')) {
-            adapted.name = `[The Studio] ${adapted.name}`;
-        } else if (industry.includes('sale') || industry.includes('marketing')) {
-            adapted.name = `[Growth Hack] ${adapted.name}`;
-        }
+        const suggested = filteredMatches.slice(0, 2).map(act => {
+            let adapted = { ...act };
+            if (isRemote && act.remote_compatible === 0) {
+                adapted.name = `[Virtual] ${act.name}`;
+                adapted.description = `A remote-adapted version of ${act.name}. ${act.description}`;
+                adapted.remote_compatible = 1;
+            } else if (isBudgetLow && act.estimated_cost !== 'Low') {
+                adapted.name = `[Budget-Friendly] ${act.name}`;
+                adapted.estimated_cost = 'Low';
+            }
+            if (organization?.companyName) {
+                adapted.description = `${organization.companyName} Special: ${adapted.description}`;
+            }
+            return adapted;
+        });
 
-        // Add company context
-        if (organization?.companyName) {
-            adapted.description = `${organization.companyName} Special: ${adapted.description}`;
-        }
+        let message = `I've architected these new variants based on the ${organization?.industry || 'general'} vibes at ${organization?.companyName || 'the office'}. Check out "${suggested[0]?.name || 'the ideas'}" below.`;
 
-        return adapted;
-    });
-
-    // 5. Build AI Response Message
-    let message = "";
-    if (isProductive) {
-        message = "I've architected these drafts to focus specifically on team growth and professional development. ";
-    } else if (isQuiet) {
-        message = "I've curated these quiet, focused drafts to help the team recharge after a busy week. ";
-    } else if (isRemote) {
-        message = "Since your team is working remotely, I've drafted some virtual adaptations of classic team activities! ";
-    } else if (isBudgetLow) {
-        message = "I've optimized these brainstorm drafts to keep the impact high but the costs low. ";
-    } else if (isActive) {
-        message = "Let's get the team moving! I've amped up the physical energy in these drafts. ";
-    } else {
-        message = `Based on your request and the ${organization?.industry || 'general'} vibes at ${organization?.companyName || 'the office'}, I've architected these new variants. `;
+        return {
+            message,
+            suggestedActivities: suggested,
+            engine: 'heuristic'
+        };
     }
-
-    if (suggested.length > 0) {
-        message += `Check out the "${suggested[0].name}" draft below. I've modified the steps to fit your specific request. What do you think?`;
-    } else {
-        message = "That's an interesting challenge! Could you tell me a bit more about the goal? I want to make sure I architect the perfect variant for you.";
-    }
-
-    return {
-        message,
-        suggestedActivities: suggested
-    };
 };

@@ -16,6 +16,7 @@ interface Message {
     sender: 'user' | 'ai';
     activities?: Activity[];
     timestamp: Date;
+    engine?: 'gemini' | 'heuristic';
 }
 
 export const BrainstormScreen = ({ navigation }: any) => {
@@ -88,7 +89,8 @@ export const BrainstormScreen = ({ navigation }: any) => {
                 text: response.message,
                 sender: 'ai',
                 activities: response.suggestedActivities,
-                timestamp: new Date()
+                timestamp: new Date(),
+                engine: response.engine
             };
 
             setMessages(prev => [...prev, aiMsg]);
@@ -148,6 +150,27 @@ export const BrainstormScreen = ({ navigation }: any) => {
                         <Text style={[styles.messageText, { color: isAI ? theme.colors.text : '#FFF' }]}>
                             {message.text}
                         </Text>
+                        {isAI && message.engine && (
+                            <View style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                marginTop: 6,
+                                opacity: 0.8,
+                                gap: 4,
+                                paddingTop: 4,
+                                borderTopWidth: 1,
+                                borderTopColor: theme.colors.primary + '20'
+                            }}>
+                                <MaterialCommunityIcons
+                                    name={message.engine === 'gemini' ? "rhombus-split" : "cog-refresh-outline"}
+                                    size={10}
+                                    color={theme.colors.primary}
+                                />
+                                <Text style={{ fontSize: 9, color: theme.colors.primary, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    {message.engine === 'gemini' ? "Powered by Gemini" : "Heuristic Fallback"}
+                                </Text>
+                            </View>
+                        )}
                     </View>
 
                     {message.activities && message.activities.length > 0 && (
@@ -203,7 +226,7 @@ export const BrainstormScreen = ({ navigation }: any) => {
                     <KeyboardAvoidingView
                         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                         style={[styles.container, { backgroundColor: theme.colors.background }]}
-                        keyboardVerticalOffset={Platform.OS === 'ios' ? (headerHeight || 0) : 0}
+                        keyboardVerticalOffset={Platform.OS === 'ios' ? 70 : 0} // Standard offset
                     >
                         <ScrollView
                             ref={scrollRef}
@@ -242,7 +265,10 @@ export const BrainstormScreen = ({ navigation }: any) => {
                                 placeholderTextColor={theme.colors.textSecondary}
                                 value={inputText}
                                 onChangeText={setInputText}
-                                multiline
+                                multiline={false} // Change to false for standard 'Enter to send' behavior
+                                onSubmitEditing={handleSend}
+                                returnKeyType="send"
+                                blurOnSubmit={false}
                             />
                             <TouchableOpacity
                                 style={[styles.sendBtn, { backgroundColor: theme.colors.primary, opacity: inputText.trim() ? 1 : 0.6 }]}
