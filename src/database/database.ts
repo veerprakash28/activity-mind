@@ -43,8 +43,18 @@ export interface PersonalTask {
     notes: string | null;
     reminder_time: string | null; // ISO
     status: TaskStatus;
+    priority: 'Low' | 'Medium' | 'High';
     notification_id: string | null;
     created_at: string;
+}
+
+export interface ChatMessage {
+    id: number;
+    text: string;
+    sender: 'user' | 'ai';
+    activities: string | null; // JSON
+    engine: string | null;
+    timestamp: string;
 }
 
 export interface Favorite {
@@ -119,10 +129,21 @@ export const initDb = async () => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
       description TEXT,
+      notes TEXT,
       "reminder_time" TEXT,
       status TEXT DEFAULT 'pending',
+      priority TEXT DEFAULT 'Medium',
       notification_id TEXT,
       "created_at" TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS chat_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        text TEXT NOT NULL,
+        sender TEXT NOT NULL,
+        activities TEXT,
+        engine TEXT,
+        timestamp TEXT NOT NULL
     );
   `);
 
@@ -144,6 +165,10 @@ export const initDb = async () => {
         const hasNotes = tasksInfo.some(col => col.name === 'notes');
         if (!hasNotes) {
             await db.execAsync(`ALTER TABLE tasks ADD COLUMN notes TEXT;`);
+        }
+        const hasPriority = tasksInfo.some(col => col.name === 'priority');
+        if (!hasPriority) {
+            await db.execAsync(`ALTER TABLE tasks ADD COLUMN priority TEXT DEFAULT 'Medium';`);
         }
     } catch (e) {
         console.error("Migration failed", e);
@@ -589,6 +614,25 @@ export const updateActivityRecurringPattern = async (activityId: number, pattern
     );
 };
 
+// --- CHAT HISTORY ---
+export const saveChatMessage = async (text: string, sender: 'user' | 'ai', activities: any[] | null = null, engine: string | null = null) => {
+    const db = await getDb();
+    await db.runAsync(
+        'INSERT INTO chat_history (text, sender, activities, engine, timestamp) VALUES (?, ?, ?, ?, ?)',
+        [text, sender, activities ? JSON.stringify(activities) : null, engine, new Date().toISOString()]
+    );
+};
+
+export const getChatHistory = async (): Promise<ChatMessage[]> => {
+    const db = await getDb();
+    return db.getAllAsync<ChatMessage>('SELECT * FROM chat_history ORDER BY timestamp ASC');
+};
+
+export const clearChatHistory = async () => {
+    const db = await getDb();
+    await db.runAsync('DELETE FROM chat_history');
+};
+
 // Task Management Helpers
 export const getTasks = async (): Promise<PersonalTask[]> => {
     const db = await getDb();
@@ -606,11 +650,18 @@ export const getPendingTasksCount = async (): Promise<number> => {
     return result?.count || 0;
 };
 
-export const addTask = async (title: string, description: string | null, reminderTime: string | null, notes: string | null = null, status: TaskStatus = 'pending'): Promise<number> => {
+export const addTask = async (
+    title: string,
+    description: string | null,
+    reminderTime: string | null,
+    notes: string | null = null,
+    status: TaskStatus = 'pending',
+    priority: 'Low' | 'Medium' | 'High' = 'Medium'
+): Promise<number> => {
     const db = await getDb();
     const result = await db.runAsync(
-        'INSERT INTO tasks (title, description, notes, "reminder_time", status, "created_at") VALUES (?, ?, ?, ?, ?, ?)',
-        [title, description, notes, reminderTime, status, new Date().toISOString()]
+        'INSERT INTO tasks (title, description, notes, "reminder_time", status, priority, "created_at") VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [title, description, notes, reminderTime, status, priority, new Date().toISOString()]
     );
     return result.lastInsertRowId;
 };

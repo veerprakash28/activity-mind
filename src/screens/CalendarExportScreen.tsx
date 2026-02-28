@@ -597,11 +597,12 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                                             <Text style={{ fontSize: 20, fontWeight: '800', color: canvasTextColor, flex: 1 }} numberOfLines={1}>{stripEmoji(acc.name)}</Text>
                                             <Text style={{ fontSize: 15, fontWeight: '800', color: accentColor }}>{acc.display_date}</Text>
                                         </View>
-                                        <Text style={{ fontSize: 15, color: canvasSecondaryTextColor, lineHeight: 22 }} numberOfLines={3}>{acc.description}</Text>
+                                        <Text style={{ fontSize: 15, color: canvasSecondaryTextColor, lineHeight: 22 }}>{acc.description}</Text>
                                     </View>
                                 </TouchableOpacity>
                             ))}
                         </View>
+                        <View style={{ height: 40 }} />
                     </View>
                 </View>
 
@@ -646,9 +647,10 @@ export const CalendarExportScreen = ({ navigation }: any) => {
                                     <Text style={{ fontSize: 24, fontWeight: '900', color: canvasTextColor }}>{stripEmoji(acc.name)}</Text>
                                 </View>
                                 <Text style={{ fontSize: 18, fontWeight: '700', color: accentColor, marginTop: 4 }}>{acc.display_date}</Text>
-                                <Text style={{ fontSize: 16, color: canvasSecondaryTextColor, marginTop: 6, lineHeight: 22 }} numberOfLines={2}>{acc.description}</Text>
+                                <Text style={{ fontSize: 16, color: canvasSecondaryTextColor, marginTop: 6, lineHeight: 22 }}>{acc.description}</Text>
                             </TouchableOpacity>
                         ))}
+                        <View style={{ height: 40 }} />
                     </View>
                 </View>
 

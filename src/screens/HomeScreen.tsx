@@ -172,7 +172,8 @@ export const HomeScreen = () => {
                                 key={task.id}
                                 task={task}
                                 onToggle={async () => {
-                                    const newStatus = task.status === 'pending' ? 'completed' : 'pending';
+                                    const isCurrentlyCompleted = task.status === 'completed';
+                                    const newStatus = isCurrentlyCompleted ? 'pending' : 'completed';
                                     if (newStatus === 'completed' && task.notification_id) {
                                         await NotificationService.cancelTaskReminder(task.notification_id);
                                         await updateTask(task.id, { status: 'completed', notification_id: null });

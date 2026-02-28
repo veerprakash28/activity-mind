@@ -34,6 +34,8 @@ export const TaskItem = ({ task, onToggle, onDelete, onEdit }: TaskItemProps) =>
         }
     };
 
+    const priorityColor = task.priority === 'High' ? theme.colors.error : task.priority === 'Medium' ? theme.colors.warning : theme.colors.success;
+
     return (
         <View style={[
             styles.container,
@@ -43,65 +45,79 @@ export const TaskItem = ({ task, onToggle, onDelete, onEdit }: TaskItemProps) =>
                 borderRadius: 16,
             }
         ]}>
-            {/* Checkbox */}
-            <TouchableOpacity
-                style={styles.checkArea}
-                onPress={onToggle}
-                activeOpacity={0.7}
-            >
-                <MaterialCommunityIcons
-                    name={isCompleted ? "checkbox-marked-circle" : "checkbox-blank-circle-outline"}
-                    size={26}
-                    color={isCompleted ? theme.colors.success : theme.colors.textSecondary}
-                />
-            </TouchableOpacity>
+            {/* Top row: checkbox + title + status */}
+            <View style={styles.topRow}>
+                <TouchableOpacity
+                    style={styles.checkArea}
+                    onPress={onToggle}
+                    activeOpacity={0.7}
+                >
+                    <MaterialCommunityIcons
+                        name={isCompleted ? "checkbox-marked-circle" : "checkbox-blank-circle-outline"}
+                        size={24}
+                        color={isCompleted ? theme.colors.success : theme.colors.textSecondary}
+                    />
+                </TouchableOpacity>
 
-            {/* Main content */}
-            <View style={styles.content}>
-                <Text style={[
-                    theme.typography.body1,
-                    {
-                        color: isCompleted ? theme.colors.textSecondary : theme.colors.text,
-                        textDecorationLine: isCompleted ? 'line-through' : 'none',
-                        fontWeight: '600',
-                    }
-                ]}>
-                    {task.title}
-                </Text>
-
-                {task.description ? (
-                    <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginTop: 3 }]} numberOfLines={1}>
-                        {task.description}
+                <View style={{ flex: 1 }}>
+                    <Text style={[
+                        theme.typography.body1,
+                        {
+                            color: isCompleted ? theme.colors.textSecondary : theme.colors.text,
+                            textDecorationLine: isCompleted ? 'line-through' : 'none',
+                            fontWeight: '600',
+                        }
+                    ]}>
+                        {task.title}
                     </Text>
-                ) : null}
+                </View>
 
-                {task.notes ? (
-                    <View style={[styles.notesContainer, { borderLeftColor: theme.colors.primary + '40' }]}>
-                        <MaterialCommunityIcons name="note-text-outline" size={12} color={theme.colors.textSecondary} />
-                        <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginLeft: 4, fontStyle: 'italic', flex: 1 }]} numberOfLines={2}>
-                            {task.notes}
-                        </Text>
-                    </View>
-                ) : null}
-
-                {task.reminder_time && (
-                    <View style={[styles.timeBadge, { backgroundColor: theme.colors.primaryLight || theme.colors.primary + '10' }]}>
-                        <MaterialCommunityIcons name="clock-outline" size={12} color={theme.colors.primary} />
-                        <Text style={[theme.typography.caption, { color: theme.colors.primary, marginLeft: 4, fontWeight: '500' }]}>
-                            {new Date(task.reminder_time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        </Text>
-                    </View>
-                )}
-            </View>
-
-            {/* Right side: status badge + actions */}
-            <View style={styles.rightSide}>
                 {task.status !== 'pending' && task.status !== 'completed' && (
                     <View style={[styles.statusBadge, { backgroundColor: getStatusColor(task.status) + '15', borderColor: getStatusColor(task.status) }]}>
                         <MaterialCommunityIcons name={getStatusIcon(task.status)} size={10} color={getStatusColor(task.status)} />
                         <Text style={[styles.statusText, { color: getStatusColor(task.status) }]}> {task.status.toUpperCase()}</Text>
                     </View>
                 )}
+            </View>
+
+            {/* Description */}
+            {task.description ? (
+                <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginTop: 4, marginLeft: 38 }]} numberOfLines={1}>
+                    {task.description}
+                </Text>
+            ) : null}
+
+            {/* Notes */}
+            {task.notes ? (
+                <View style={[styles.notesContainer, { borderLeftColor: theme.colors.primary + '40', marginLeft: 38 }]}>
+                    <MaterialCommunityIcons name="note-text-outline" size={12} color={theme.colors.textSecondary} />
+                    <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginLeft: 4, fontStyle: 'italic', flex: 1 }]} numberOfLines={2}>
+                        {task.notes}
+                    </Text>
+                </View>
+            ) : null}
+
+            {/* Bottom row: badges + actions */}
+            <View style={styles.bottomRow}>
+                <View style={styles.badges}>
+                    {task.priority && (
+                        <View style={[styles.priorityBadge, { backgroundColor: priorityColor + '12' }]}>
+                            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: priorityColor, marginRight: 4 }} />
+                            <Text style={[styles.priorityText, { color: priorityColor }]}>
+                                {task.priority}
+                            </Text>
+                        </View>
+                    )}
+                    {task.reminder_time && (
+                        <View style={[styles.timeBadge, { backgroundColor: theme.colors.primaryLight || theme.colors.primary + '10' }]}>
+                            <MaterialCommunityIcons name="clock-outline" size={11} color={theme.colors.primary} />
+                            <Text style={{ color: theme.colors.primary, marginLeft: 3, fontWeight: '500', fontSize: 10 }}>
+                                {new Date(task.reminder_time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </Text>
+                        </View>
+                    )}
+                </View>
+
                 <View style={styles.actions}>
                     {onEdit && (
                         <TouchableOpacity
@@ -109,7 +125,7 @@ export const TaskItem = ({ task, onToggle, onDelete, onEdit }: TaskItemProps) =>
                             onPress={onEdit}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                            <MaterialCommunityIcons name="pencil-outline" size={18} color={theme.colors.textSecondary} />
+                            <MaterialCommunityIcons name="pencil-outline" size={16} color={theme.colors.textSecondary} />
                         </TouchableOpacity>
                     )}
                     <TouchableOpacity
@@ -117,7 +133,7 @@ export const TaskItem = ({ task, onToggle, onDelete, onEdit }: TaskItemProps) =>
                         onPress={onDelete}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                        <MaterialCommunityIcons name="delete-outline" size={18} color={theme.colors.error} />
+                        <MaterialCommunityIcons name="delete-outline" size={16} color={theme.colors.error} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -127,9 +143,7 @@ export const TaskItem = ({ task, onToggle, onDelete, onEdit }: TaskItemProps) =>
 
 const styles = StyleSheet.create({
     container: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
+        padding: 14,
         borderWidth: 1,
         marginBottom: 12,
         shadowColor: '#000',
@@ -138,20 +152,19 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 2,
     },
-    checkArea: {
-        paddingRight: 14,
+    topRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
-    content: {
-        flex: 1,
+    checkArea: {
+        paddingRight: 10,
     },
     timeBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 6,
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 6,
-        alignSelf: 'flex-start',
     },
     notesContainer: {
         flexDirection: 'row',
@@ -163,18 +176,27 @@ const styles = StyleSheet.create({
         paddingRight: 4,
         borderRadius: 4,
     },
-    rightSide: {
-        alignItems: 'flex-end',
-        marginLeft: 8,
+    bottomRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 10,
+        marginLeft: 34,
+    },
+    badges: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        flexWrap: 'wrap',
+        flex: 1,
     },
     actions: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 6,
     },
     actionBtn: {
-        padding: 7,
-        borderRadius: 10,
+        padding: 6,
+        borderRadius: 8,
         marginLeft: 6,
     },
     statusBadge: {
@@ -184,10 +206,23 @@ const styles = StyleSheet.create({
         paddingVertical: 3,
         borderRadius: 8,
         borderWidth: 1,
+        marginLeft: 8,
     },
     statusText: {
         fontSize: 9,
         fontWeight: '800',
         letterSpacing: 0.5,
+    },
+    priorityBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
+    },
+    priorityText: {
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 0.3,
     }
 });

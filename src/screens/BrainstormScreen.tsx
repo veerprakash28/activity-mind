@@ -2,10 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Keyboard } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { HeaderHeightContext } from '@react-navigation/elements';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useAppContext } from '../context/AppContext';
 import { ActivityCard } from '../components/ActivityCard';
-import { Activity, addCustomActivity } from '../database/database';
+import { Activity, addCustomActivity, saveChatMessage, getChatHistory, clearChatHistory } from '../database/database';
 import { processAIChat, AIChatResponse } from '../database/smartEngine';
 import { StatusModal, StatusType } from '../components/StatusModal';
 import { ActivityDetailModal } from '../components/ActivityDetailModal';
@@ -21,16 +21,9 @@ interface Message {
 
 export const BrainstormScreen = ({ navigation }: any) => {
     const { theme, organization } = useAppContext();
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            id: '1',
-            text: `Hi! I'm your AI Brainstorm partner. ${new Date().getHours() < 12 ? 'Good morning!' :
-                new Date().getHours() < 18 ? 'Good afternoon!' : 'Good evening!'
-                } Ready to architect some custom activities for ${organization?.companyName || 'your team'}?`,
-            sender: 'ai',
-            timestamp: new Date()
-        }
-    ]);
+    const insets = useSafeAreaInsets();
+    const headerHeight = useHeaderHeight();
+    const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [typingMessage, setTypingMessage] = useState('AI is thinking...');
@@ -46,8 +39,75 @@ export const BrainstormScreen = ({ navigation }: any) => {
     const [statusTitle, setStatusTitle] = useState('');
     const [statusMessage, setStatusMessage] = useState('');
 
+    // Clear chat modal state
+    const [clearChatVisible, setClearChatVisible] = useState(false);
+
+    // Track keyboard for bottom padding adjustment
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
+
     useEffect(() => {
-        // Scroll to bottom when messages change
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+        const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+        const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+        return () => { showSub.remove(); hideSub.remove(); };
+    }, []);
+
+    useEffect(() => {
+        const loadHistory = async () => {
+            const history = await getChatHistory();
+            if (history.length > 0) {
+                setMessages(history.map(m => ({
+                    id: m.id.toString(),
+                    text: m.text,
+                    sender: m.sender,
+                    activities: m.activities ? JSON.parse(m.activities) : undefined,
+                    timestamp: new Date(m.timestamp),
+                    engine: (m.engine as any) || undefined
+                })));
+            } else {
+                setMessages([
+                    {
+                        id: '1',
+                        text: `Hi! I'm your AI Brainstorm partner. ${new Date().getHours() < 12 ? 'Good morning!' :
+                            new Date().getHours() < 18 ? 'Good afternoon!' : 'Good evening!'
+                            } Ready to architect some custom activities for ${organization?.companyName || 'your team'}?`,
+                        sender: 'ai',
+                        timestamp: new Date()
+                    }
+                ]);
+            }
+        };
+        loadHistory();
+    }, []);
+
+    const handleClearChat = () => {
+        setClearChatVisible(true);
+    };
+
+    const confirmClearChat = async () => {
+        await clearChatHistory();
+        setMessages([
+            {
+                id: Date.now().toString(),
+                text: `Chat cleared. Ready for a fresh brainstorm!`,
+                sender: 'ai',
+                timestamp: new Date()
+            }
+        ]);
+    };
+
+    React.useLayoutEffect(() => {
+        navigation.setOptions({
+            headerRight: () => (
+                <TouchableOpacity onPress={handleClearChat} style={{ marginRight: 15 }}>
+                    <MaterialCommunityIcons name="broom" size={22} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+            )
+        });
+    }, [navigation, theme.colors.textSecondary]);
+
+    useEffect(() => {
         setTimeout(() => {
             scrollRef.current?.scrollToEnd({ animated: true });
         }, 100);
@@ -64,11 +124,12 @@ export const BrainstormScreen = ({ navigation }: any) => {
         };
 
         setMessages(prev => [...prev, userMsg]);
+        await saveChatMessage(userMsg.text, userMsg.sender);
+
         const currentInput = inputText;
         setInputText('');
         setIsTyping(true);
 
-        // Thought Trajectory Sequence
         const thoughts = [
             "Analyzing team profile...",
             `Scanning ${organization?.industry || 'industry'} patterns...`,
@@ -94,6 +155,7 @@ export const BrainstormScreen = ({ navigation }: any) => {
             };
 
             setMessages(prev => [...prev, aiMsg]);
+            await saveChatMessage(aiMsg.text, aiMsg.sender, aiMsg.activities, aiMsg.engine);
         } catch (error) {
             console.error("AI Error:", error);
         } finally {
@@ -204,101 +266,93 @@ export const BrainstormScreen = ({ navigation }: any) => {
         );
     };
 
-    const insets = useSafeAreaInsets();
-    const [keyboardVisible, setKeyboardVisible] = useState(false);
-
-    useEffect(() => {
-        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-        const showSubscription = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
-        const hideSubscription = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
-        return () => {
-            showSubscription.remove();
-            hideSubscription.remove();
-        };
-    }, []);
-
     return (
-        <View style={{ flex: 1, backgroundColor: theme.colors.background, paddingTop: Math.max(insets.top, 0) }}>
-            <HeaderHeightContext.Consumer>
-                {headerHeight => (
-                    <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                        style={[styles.container, { backgroundColor: theme.colors.background }]}
-                        keyboardVerticalOffset={Platform.OS === 'ios' ? 70 : 0} // Standard offset
-                    >
-                        <ScrollView
-                            ref={scrollRef}
-                            contentContainerStyle={styles.scrollContent}
-                            showsVerticalScrollIndicator={false}
-                        >
-                            {messages.map(renderMessage)}
-                            {isTyping && (
-                                <View style={[styles.messageWrapper, styles.aiWrapper]}>
-                                    <View style={[styles.avatar, { backgroundColor: theme.colors.primary, marginRight: 12 }]}>
-                                        <MaterialCommunityIcons name="robot" size={16} color="#FFF" />
-                                    </View>
-                                    <View style={[styles.bubble, { backgroundColor: theme.colors.surface, borderBottomLeftRadius: 4, paddingVertical: 12 }]}>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                            <ActivityIndicator size="small" color={theme.colors.primary} />
-                                            <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, fontStyle: 'italic' }]}>
-                                                {typingMessage}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                </View>
-                            )}
-                        </ScrollView>
-
-                        <View style={[
-                            styles.inputContainer,
-                            {
-                                backgroundColor: theme.colors.surface,
-                                borderTopColor: theme.colors.border,
-                                paddingBottom: keyboardVisible ? 2 : Math.max(insets.bottom, 12)
-                            }
-                        ]}>
-                            <TextInput
-                                style={[styles.input, { color: theme.colors.text, backgroundColor: theme.colors.background }]}
-                                placeholder="Refine this idea with the AI..."
-                                placeholderTextColor={theme.colors.textSecondary}
-                                value={inputText}
-                                onChangeText={setInputText}
-                                multiline={false} // Change to false for standard 'Enter to send' behavior
-                                onSubmitEditing={handleSend}
-                                returnKeyType="send"
-                                blurOnSubmit={false}
-                            />
-                            <TouchableOpacity
-                                style={[styles.sendBtn, { backgroundColor: theme.colors.primary, opacity: inputText.trim() ? 1 : 0.6 }]}
-                                onPress={handleSend}
-                                disabled={!inputText.trim() || isTyping}
-                            >
-                                <MaterialCommunityIcons name="send" size={20} color="#FFF" />
-                            </TouchableOpacity>
+        <KeyboardAvoidingView
+            style={[styles.container, { backgroundColor: theme.colors.background }]}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={headerHeight}
+        >
+            <ScrollView
+                ref={scrollRef}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="interactive"
+            >
+                {messages.map(renderMessage)}
+                {isTyping && (
+                    <View style={[styles.messageWrapper, styles.aiWrapper]}>
+                        <View style={[styles.avatar, { backgroundColor: theme.colors.primary, marginRight: 12 }]}>
+                            <MaterialCommunityIcons name="robot" size={16} color="#FFF" />
                         </View>
-
-                        <ActivityDetailModal
-                            activity={selectedActivity}
-                            visible={detailVisible}
-                            onClose={() => setDetailVisible(false)}
-                            hideSave
-                            hideSchedule
-                        />
-
-                        <StatusModal
-                            visible={statusVisible}
-                            type={statusType}
-                            title={statusTitle}
-                            message={statusMessage}
-                            onConfirm={() => setStatusVisible(false)}
-                            onClose={() => setStatusVisible(false)}
-                        />
-                    </KeyboardAvoidingView>
+                        <View style={[styles.bubble, { backgroundColor: theme.colors.surface, borderBottomLeftRadius: 4, paddingVertical: 12 }]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <ActivityIndicator size="small" color={theme.colors.primary} />
+                                <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, fontStyle: 'italic' }]}>
+                                    {typingMessage}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
                 )}
-            </HeaderHeightContext.Consumer>
-        </View>
+            </ScrollView>
+
+            <View style={[
+                styles.inputContainer,
+                {
+                    backgroundColor: theme.colors.surface,
+                    borderTopColor: theme.colors.border,
+                    paddingBottom: keyboardVisible ? 4 : Math.max(insets.bottom, 12),
+                }
+            ]}>
+                <TextInput
+                    style={[styles.input, { color: theme.colors.text, backgroundColor: theme.colors.background }]}
+                    placeholder="Refine this idea with the AI..."
+                    placeholderTextColor={theme.colors.textSecondary}
+                    value={inputText}
+                    onChangeText={setInputText}
+                    multiline={false}
+                    onSubmitEditing={handleSend}
+                    returnKeyType="send"
+                    blurOnSubmit={false}
+                />
+                <TouchableOpacity
+                    style={[styles.sendBtn, { backgroundColor: theme.colors.primary, opacity: inputText.trim() ? 1 : 0.6 }]}
+                    onPress={handleSend}
+                    disabled={!inputText.trim() || isTyping}
+                >
+                    <MaterialCommunityIcons name="send" size={20} color="#FFF" />
+                </TouchableOpacity>
+            </View>
+
+            <ActivityDetailModal
+                activity={selectedActivity}
+                visible={detailVisible}
+                onClose={() => setDetailVisible(false)}
+                hideSave
+                hideSchedule
+            />
+
+            <StatusModal
+                visible={statusVisible}
+                type={statusType}
+                title={statusTitle}
+                message={statusMessage}
+                onConfirm={() => setStatusVisible(false)}
+                onClose={() => setStatusVisible(false)}
+            />
+
+            <StatusModal
+                visible={clearChatVisible}
+                type="confirm"
+                title="Clear Chat History"
+                message="Are you sure you want to delete all messages? This cannot be undone."
+                confirmLabel="Clear All"
+                cancelLabel="Cancel"
+                onConfirm={confirmClearChat}
+                onClose={() => setClearChatVisible(false)}
+            />
+        </KeyboardAvoidingView>
     );
 };
 
@@ -319,7 +373,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingVertical: 10,
         borderRadius: 12,
-        marginTop: -10, // Overlap card slightly
+        marginTop: -10,
         marginHorizontal: 10,
         zIndex: 10
     },
@@ -329,7 +383,7 @@ const styles = StyleSheet.create({
         alignItems: 'flex-end',
         paddingHorizontal: 8,
         paddingTop: 8,
-        borderTopWidth: 1
+        borderTopWidth: 1,
     },
     input: { flex: 1, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 10, maxHeight: 100, fontSize: 15, marginRight: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' },
     sendBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' }

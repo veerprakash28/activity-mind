@@ -248,7 +248,7 @@ export const SettingsScreen = ({ navigation }: any) => {
     );
 
     const renderOrgTab = () => (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled">
             {/* Update available tile */}
             {updateInfo && (
                 <TouchableOpacity
@@ -489,7 +489,7 @@ export const SettingsScreen = ({ navigation }: any) => {
     );
 
     const renderThemeTab = () => (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} automaticallyAdjustKeyboardInsets keyboardShouldPersistTaps="handled">
             {/* Preview + Save */}
             <View style={[styles.previewCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                 <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginBottom: 10 }]}>Preview</Text>
