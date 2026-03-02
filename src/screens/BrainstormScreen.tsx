@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useHeaderHeight } from '@react-navigation/elements';
 import { useAppContext } from '../context/AppContext';
 import { ActivityCard } from '../components/ActivityCard';
 import { Activity, addCustomActivity, saveChatMessage, getChatHistory, clearChatHistory } from '../database/database';
@@ -22,36 +21,21 @@ interface Message {
 export const BrainstormScreen = ({ navigation }: any) => {
     const { theme, organization } = useAppContext();
     const insets = useSafeAreaInsets();
-    const headerHeight = useHeaderHeight();
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [typingMessage, setTypingMessage] = useState('AI is thinking...');
     const scrollRef = useRef<ScrollView>(null);
 
-    // Detail Modal State
     const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
     const [detailVisible, setDetailVisible] = useState(false);
 
-    // Status Modal State
     const [statusVisible, setStatusVisible] = useState(false);
     const [statusType, setStatusType] = useState<StatusType>('success');
     const [statusTitle, setStatusTitle] = useState('');
     const [statusMessage, setStatusMessage] = useState('');
 
-    // Clear chat modal state
     const [clearChatVisible, setClearChatVisible] = useState(false);
-
-    // Track keyboard for bottom padding adjustment
-    const [keyboardVisible, setKeyboardVisible] = useState(false);
-
-    useEffect(() => {
-        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-        const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
-        const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
-        return () => { showSub.remove(); hideSub.remove(); };
-    }, []);
 
     useEffect(() => {
         const loadHistory = async () => {
@@ -66,77 +50,38 @@ export const BrainstormScreen = ({ navigation }: any) => {
                     engine: (m.engine as any) || undefined
                 })));
             } else {
-                setMessages([
-                    {
-                        id: '1',
-                        text: `Hi! I'm your AI Brainstorm partner. ${new Date().getHours() < 12 ? 'Good morning!' :
-                            new Date().getHours() < 18 ? 'Good afternoon!' : 'Good evening!'
-                            } Ready to architect some custom activities for ${organization?.companyName || 'your team'}?`,
-                        sender: 'ai',
-                        timestamp: new Date()
-                    }
-                ]);
+                setMessages([{
+                    id: '1',
+                    text: `Hi! I'm your AI Brainstorm partner. ${new Date().getHours() < 12 ? 'Good morning!' : new Date().getHours() < 18 ? 'Good afternoon!' : 'Good evening!'} Ready to architect some custom activities for ${organization?.companyName || 'your team'}?`,
+                    sender: 'ai',
+                    timestamp: new Date()
+                }]);
             }
         };
         loadHistory();
     }, []);
 
-    const handleClearChat = () => {
-        setClearChatVisible(true);
-    };
+    const handleClearChat = () => setClearChatVisible(true);
 
     const confirmClearChat = async () => {
         await clearChatHistory();
-        setMessages([
-            {
-                id: Date.now().toString(),
-                text: `Chat cleared. Ready for a fresh brainstorm!`,
-                sender: 'ai',
-                timestamp: new Date()
-            }
-        ]);
+        setMessages([{ id: Date.now().toString(), text: `Chat cleared. Ready for a fresh brainstorm!`, sender: 'ai', timestamp: new Date() }]);
     };
 
-    React.useLayoutEffect(() => {
-        navigation.setOptions({
-            headerRight: () => (
-                <TouchableOpacity onPress={handleClearChat} style={{ marginRight: 15 }}>
-                    <MaterialCommunityIcons name="broom" size={22} color={theme.colors.textSecondary} />
-                </TouchableOpacity>
-            )
-        });
-    }, [navigation, theme.colors.textSecondary]);
-
     useEffect(() => {
-        setTimeout(() => {
-            scrollRef.current?.scrollToEnd({ animated: true });
-        }, 100);
+        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
     }, [messages, isTyping]);
 
     const handleSend = async () => {
         if (!inputText.trim()) return;
-
-        const userMsg: Message = {
-            id: Date.now().toString(),
-            text: inputText,
-            sender: 'user',
-            timestamp: new Date()
-        };
-
+        const userMsg: Message = { id: Date.now().toString(), text: inputText, sender: 'user', timestamp: new Date() };
         setMessages(prev => [...prev, userMsg]);
         await saveChatMessage(userMsg.text, userMsg.sender);
-
         const currentInput = inputText;
         setInputText('');
         setIsTyping(true);
 
-        const thoughts = [
-            "Analyzing team profile...",
-            `Scanning ${organization?.industry || 'industry'} patterns...`,
-            "Drafting custom variants...",
-            "Finalizing architect drafts..."
-        ];
-
+        const thoughts = ["Analyzing team profile...", `Scanning ${organization?.industry || 'industry'} patterns...`, "Drafting custom variants...", "Finalizing architect drafts..."];
         for (let i = 0; i < thoughts.length; i++) {
             setTypingMessage(thoughts[i]);
             await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
@@ -144,16 +89,7 @@ export const BrainstormScreen = ({ navigation }: any) => {
 
         try {
             const response: AIChatResponse = await processAIChat(currentInput, messages.map(m => ({ role: m.sender, content: m.text })), organization);
-
-            const aiMsg: Message = {
-                id: (Date.now() + 1).toString(),
-                text: response.message,
-                sender: 'ai',
-                activities: response.suggestedActivities,
-                timestamp: new Date(),
-                engine: response.engine
-            };
-
+            const aiMsg: Message = { id: (Date.now() + 1).toString(), text: response.message, sender: 'ai', activities: response.suggestedActivities, timestamp: new Date(), engine: response.engine };
             setMessages(prev => [...prev, aiMsg]);
             await saveChatMessage(aiMsg.text, aiMsg.sender, aiMsg.activities, aiMsg.engine);
         } catch (error) {
@@ -166,28 +102,18 @@ export const BrainstormScreen = ({ navigation }: any) => {
     const saveToBank = async (activity: Activity) => {
         try {
             await addCustomActivity({
-                name: activity.name,
-                description: activity.description,
-                category: activity.category,
+                name: activity.name, description: activity.description, category: activity.category,
                 steps: JSON.stringify(activity.steps ? (typeof activity.steps === 'string' ? JSON.parse(activity.steps) : activity.steps) : ["Collaborate with your team"]),
                 materials: JSON.stringify(activity.materials ? (typeof activity.materials === 'string' ? JSON.parse(activity.materials) : activity.materials) : ["None"]),
-                estimated_cost: activity.estimated_cost,
-                duration: activity.duration,
-                difficulty: activity.difficulty || 'Medium',
-                prep_time: activity.prep_time || '10 min',
-                min_employees: activity.min_employees,
-                max_employees: activity.max_employees,
-                indoor_outdoor: activity.indoor_outdoor,
-                remote_compatible: activity.remote_compatible
+                estimated_cost: activity.estimated_cost, duration: activity.duration, difficulty: activity.difficulty || 'Medium',
+                prep_time: activity.prep_time || '10 min', min_employees: activity.min_employees, max_employees: activity.max_employees,
+                indoor_outdoor: activity.indoor_outdoor, remote_compatible: activity.remote_compatible
             });
-
-            setStatusType('success');
-            setStatusTitle('Brainstorm Saved!');
+            setStatusType('success'); setStatusTitle('Brainstorm Saved!');
             setStatusMessage(`"${activity.name}" variant has been added to your bank.`);
             setStatusVisible(true);
         } catch (error) {
-            setStatusType('error');
-            setStatusTitle('Oops!');
+            setStatusType('error'); setStatusTitle('Oops!');
             setStatusMessage('Failed to save activity. Please try again.');
             setStatusVisible(true);
         }
@@ -203,38 +129,17 @@ export const BrainstormScreen = ({ navigation }: any) => {
                     </View>
                 )}
                 <View style={{ flex: 1, alignItems: isAI ? 'flex-start' : 'flex-end' }}>
-                    <View style={[
-                        styles.bubble,
-                        isAI ?
-                            { backgroundColor: theme.colors.surface, borderBottomLeftRadius: 4 } :
-                            { backgroundColor: theme.colors.primary, borderBottomRightRadius: 4 }
-                    ]}>
-                        <Text style={[styles.messageText, { color: isAI ? theme.colors.text : '#FFF' }]}>
-                            {message.text}
-                        </Text>
+                    <View style={[styles.bubble, isAI ? { backgroundColor: theme.colors.surface, borderBottomLeftRadius: 4 } : { backgroundColor: theme.colors.primary, borderBottomRightRadius: 4 }]}>
+                        <Text style={[styles.messageText, { color: isAI ? theme.colors.text : '#FFF' }]}>{message.text}</Text>
                         {isAI && message.engine && (
-                            <View style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                marginTop: 6,
-                                opacity: 0.8,
-                                gap: 4,
-                                paddingTop: 4,
-                                borderTopWidth: 1,
-                                borderTopColor: theme.colors.primary + '20'
-                            }}>
-                                <MaterialCommunityIcons
-                                    name={message.engine === 'gemini' ? "rhombus-split" : "cog-refresh-outline"}
-                                    size={10}
-                                    color={theme.colors.primary}
-                                />
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, opacity: 0.8, gap: 4, paddingTop: 4, borderTopWidth: 1, borderTopColor: theme.colors.primary + '20' }}>
+                                <MaterialCommunityIcons name={message.engine === 'gemini' ? "rhombus-split" : "cog-refresh-outline"} size={10} color={theme.colors.primary} />
                                 <Text style={{ fontSize: 9, color: theme.colors.primary, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                                     {message.engine === 'gemini' ? "Powered by Gemini" : "Heuristic Fallback"}
                                 </Text>
                             </View>
                         )}
                     </View>
-
                     {message.activities && message.activities.length > 0 && (
                         <View style={styles.activityContainer}>
                             <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginBottom: 8, marginLeft: 4 }]}>
@@ -242,18 +147,8 @@ export const BrainstormScreen = ({ navigation }: any) => {
                             </Text>
                             {message.activities.map((act, i) => (
                                 <View key={i} style={styles.activityCardWrapper}>
-                                    <ActivityCard
-                                        activity={act}
-                                        expanded={false}
-                                        onPress={() => {
-                                            setSelectedActivity(act);
-                                            setDetailVisible(true);
-                                        }}
-                                    />
-                                    <TouchableOpacity
-                                        style={[styles.saveBtn, { backgroundColor: theme.colors.primary }]}
-                                        onPress={() => saveToBank(act)}
-                                    >
+                                    <ActivityCard activity={act} expanded={false} onPress={() => { setSelectedActivity(act); setDetailVisible(true); }} />
+                                    <TouchableOpacity style={[styles.saveBtn, { backgroundColor: theme.colors.primary }]} onPress={() => saveToBank(act)}>
                                         <MaterialCommunityIcons name="plus-circle-outline" size={18} color="#FFF" />
                                         <Text style={styles.saveBtnText}>Save this Variant</Text>
                                     </TouchableOpacity>
@@ -267,98 +162,93 @@ export const BrainstormScreen = ({ navigation }: any) => {
     };
 
     return (
-        <KeyboardAvoidingView
-            style={[styles.container, { backgroundColor: theme.colors.background }]}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            keyboardVerticalOffset={headerHeight}
-        >
-            <ScrollView
-                ref={scrollRef}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="interactive"
-            >
-                {messages.map(renderMessage)}
-                {isTyping && (
-                    <View style={[styles.messageWrapper, styles.aiWrapper]}>
-                        <View style={[styles.avatar, { backgroundColor: theme.colors.primary, marginRight: 12 }]}>
-                            <MaterialCommunityIcons name="robot" size={16} color="#FFF" />
-                        </View>
-                        <View style={[styles.bubble, { backgroundColor: theme.colors.surface, borderBottomLeftRadius: 4, paddingVertical: 12 }]}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                <ActivityIndicator size="small" color={theme.colors.primary} />
-                                <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, fontStyle: 'italic' }]}>
-                                    {typingMessage}
-                                </Text>
-                            </View>
-                        </View>
-                    </View>
-                )}
-            </ScrollView>
-
-            <View style={[
-                styles.inputContainer,
-                {
-                    backgroundColor: theme.colors.surface,
-                    borderTopColor: theme.colors.border,
-                    paddingBottom: keyboardVisible ? 4 : Math.max(insets.bottom, 12),
-                }
-            ]}>
-                <TextInput
-                    style={[styles.input, { color: theme.colors.text, backgroundColor: theme.colors.background }]}
-                    placeholder="Refine this idea with the AI..."
-                    placeholderTextColor={theme.colors.textSecondary}
-                    value={inputText}
-                    onChangeText={setInputText}
-                    multiline={false}
-                    onSubmitEditing={handleSend}
-                    returnKeyType="send"
-                    blurOnSubmit={false}
-                />
-                <TouchableOpacity
-                    style={[styles.sendBtn, { backgroundColor: theme.colors.primary, opacity: inputText.trim() ? 1 : 0.6 }]}
-                    onPress={handleSend}
-                    disabled={!inputText.trim() || isTyping}
-                >
-                    <MaterialCommunityIcons name="send" size={20} color="#FFF" />
+        <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top }]}>
+            {/* Custom header — not managed by native-stack */}
+            <View style={[styles.header, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.text} />
+                </TouchableOpacity>
+                <Text style={[styles.headerTitle, { color: theme.colors.text }]}>AI Brainstorm</Text>
+                <TouchableOpacity onPress={handleClearChat} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <MaterialCommunityIcons name="broom" size={22} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
             </View>
 
-            <ActivityDetailModal
-                activity={selectedActivity}
-                visible={detailVisible}
-                onClose={() => setDetailVisible(false)}
-                hideSave
-                hideSchedule
-            />
+            {/* KeyboardAvoidingView only wraps chat + input, NOT the header */}
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <View style={{ flex: 1 }}>
+                        <ScrollView
+                            ref={scrollRef}
+                            contentContainerStyle={styles.scrollContent}
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            {messages.map(renderMessage)}
+                            {isTyping && (
+                                <View style={[styles.messageWrapper, styles.aiWrapper]}>
+                                    <View style={[styles.avatar, { backgroundColor: theme.colors.primary, marginRight: 12 }]}>
+                                        <MaterialCommunityIcons name="robot" size={16} color="#FFF" />
+                                    </View>
+                                    <View style={[styles.bubble, { backgroundColor: theme.colors.surface, borderBottomLeftRadius: 4, paddingVertical: 12 }]}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                            <ActivityIndicator size="small" color={theme.colors.primary} />
+                                            <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, fontStyle: 'italic' }]}>{typingMessage}</Text>
+                                        </View>
+                                    </View>
+                                </View>
+                            )}
+                        </ScrollView>
 
-            <StatusModal
-                visible={statusVisible}
-                type={statusType}
-                title={statusTitle}
-                message={statusMessage}
-                onConfirm={() => setStatusVisible(false)}
-                onClose={() => setStatusVisible(false)}
-            />
+                        <View style={[styles.inputContainer, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, paddingBottom: Math.max(insets.bottom, 8) }]}>
+                            <TextInput
+                                style={[styles.input, { color: theme.colors.text, backgroundColor: theme.colors.background }]}
+                                placeholder="Refine this idea with the AI..."
+                                placeholderTextColor={theme.colors.textSecondary}
+                                value={inputText}
+                                onChangeText={setInputText}
+                                multiline={false}
+                                onSubmitEditing={handleSend}
+                                returnKeyType="send"
+                                blurOnSubmit={false}
+                            />
+                            <TouchableOpacity
+                                style={[styles.sendBtn, { backgroundColor: theme.colors.primary, opacity: inputText.trim() ? 1 : 0.6 }]}
+                                onPress={handleSend}
+                                disabled={!inputText.trim() || isTyping}
+                            >
+                                <MaterialCommunityIcons name="send" size={20} color="#FFF" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
 
-            <StatusModal
-                visible={clearChatVisible}
-                type="confirm"
-                title="Clear Chat History"
-                message="Are you sure you want to delete all messages? This cannot be undone."
-                confirmLabel="Clear All"
-                cancelLabel="Cancel"
-                onConfirm={confirmClearChat}
-                onClose={() => setClearChatVisible(false)}
-            />
-        </KeyboardAvoidingView>
+            <ActivityDetailModal activity={selectedActivity} visible={detailVisible} onClose={() => setDetailVisible(false)} hideSave hideSchedule />
+            <StatusModal visible={statusVisible} type={statusType} title={statusTitle} message={statusMessage} onConfirm={() => setStatusVisible(false)} onClose={() => setStatusVisible(false)} />
+            <StatusModal visible={clearChatVisible} type="confirm" title="Clear Chat History" message="Are you sure you want to delete all messages? This cannot be undone." confirmLabel="Clear All" cancelLabel="Cancel" onConfirm={confirmClearChat} onClose={() => setClearChatVisible(false)} />
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    scrollContent: { padding: 16, paddingTop: 10, paddingBottom: 10 },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+    },
+    scrollContent: { padding: 16, paddingTop: 10, flexGrow: 1 },
     messageWrapper: { flexDirection: 'row', marginBottom: 16, maxWidth: '85%' },
     aiWrapper: { alignSelf: 'flex-start' },
     userWrapper: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
@@ -367,24 +257,9 @@ const styles = StyleSheet.create({
     messageText: { fontSize: 15, lineHeight: 22 },
     activityContainer: { marginTop: 12, width: '100%' },
     activityCardWrapper: { marginBottom: 12 },
-    saveBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 10,
-        borderRadius: 12,
-        marginTop: -10,
-        marginHorizontal: 10,
-        zIndex: 10
-    },
+    saveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 12, marginTop: -10, marginHorizontal: 10, zIndex: 10 },
     saveBtnText: { color: '#FFF', fontWeight: 'bold', marginLeft: 6, fontSize: 13 },
-    inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        paddingHorizontal: 8,
-        paddingTop: 8,
-        borderTopWidth: 1,
-    },
+    inputContainer: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 8, paddingTop: 8, borderTopWidth: 1 },
     input: { flex: 1, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 10, maxHeight: 100, fontSize: 15, marginRight: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' },
     sendBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' }
 });

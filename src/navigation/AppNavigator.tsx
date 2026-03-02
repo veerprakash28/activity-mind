@@ -212,7 +212,7 @@ export const AppNavigator = () => {
             headerStyle: { backgroundColor: theme.colors.surface },
             headerTintColor: theme.colors.text,
             headerTitleStyle: theme.typography.h3,
-            contentStyle: { backgroundColor: theme.colors.background }
+            contentStyle: { backgroundColor: theme.colors.background },
         }}>
             <RootStack.Screen name="Tabs" component={TabNavigator} options={{ headerShown: false }} />
             <RootStack.Screen
@@ -237,7 +237,7 @@ export const AppNavigator = () => {
                 name="Brainstorm"
                 component={BrainstormScreen}
                 options={{
-                    title: 'AI Brainstorm',
+                    headerShown: false,
                 }}
             />
             <RootStack.Screen

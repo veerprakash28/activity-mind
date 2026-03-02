@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, Platform, Alert, Keyboard, ScrollView, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, Platform, Alert, Keyboard, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRoute, useNavigation } from '@react-navigation/native';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
@@ -276,121 +276,116 @@ export const TasksScreen = () => {
                 transparent={true}
                 onRequestClose={() => { setModalVisible(false); resetForm(); }}
             >
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    style={{ flex: 1 }}
-                >
-                    <View style={styles.modalOverlay}>
-                        <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
-                            <View style={styles.modalHeader}>
-                                <Text style={[theme.typography.h2, { color: theme.colors.text }]}>
-                                    {editingTask ? "Edit Task" : "New Task"}
-                                </Text>
-                                <TouchableOpacity onPress={() => { setModalVisible(false); resetForm(); }}>
-                                    <MaterialCommunityIcons name="close" size={24} color={theme.colors.textSecondary} />
-                                </TouchableOpacity>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={[theme.typography.h2, { color: theme.colors.text }]}>
+                                {editingTask ? "Edit Task" : "New Task"}
+                            </Text>
+                            <TouchableOpacity onPress={() => { setModalVisible(false); resetForm(); }}>
+                                <MaterialCommunityIcons name="close" size={24} color={theme.colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets={false}>
+                            <TextInput
+                                style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
+                                placeholder="Task title..."
+                                placeholderTextColor={theme.colors.textSecondary}
+                                value={title}
+                                onChangeText={setTitle}
+                                autoFocus={!editingTask}
+                            />
+
+                            <TextInput
+                                style={[styles.input, styles.textArea, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
+                                placeholder="Description (optional)..."
+                                placeholderTextColor={theme.colors.textSecondary}
+                                value={description}
+                                onChangeText={setDescription}
+                                multiline
+                            />
+
+                            <TextInput
+                                style={[styles.input, styles.notesArea, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
+                                placeholder="Notes / comments..."
+                                placeholderTextColor={theme.colors.textSecondary}
+                                value={notes}
+                                onChangeText={setNotes}
+                                multiline
+                            />
+
+                            <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginBottom: 8, marginLeft: 4 }]}>PRIORITY</Text>
+                            <View style={[styles.statusScroll, { flexDirection: 'row' }]}>
+                                {(['Low', 'Medium', 'High'] as const).map(p => (
+                                    <TouchableOpacity
+                                        key={p}
+                                        style={[
+                                            styles.statusChip,
+                                            {
+                                                borderColor: priority === p ? (p === 'High' ? theme.colors.error : p === 'Medium' ? theme.colors.warning : theme.colors.success) : theme.colors.border,
+                                                backgroundColor: priority === p ? (p === 'High' ? theme.colors.error + '15' : p === 'Medium' ? theme.colors.warning + '15' : theme.colors.success + '15') : 'transparent'
+                                            }
+                                        ]}
+                                        onPress={() => setPriority(p)}
+                                    >
+                                        <Text style={[
+                                            theme.typography.caption,
+                                            { color: priority === p ? (p === 'High' ? theme.colors.error : p === 'Medium' ? theme.colors.warning : theme.colors.success) : theme.colors.textSecondary, fontWeight: priority === p ? '700' : '400' }
+                                        ]}>
+                                            {p}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
                             </View>
 
-                            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                                <TextInput
-                                    style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-                                    placeholder="Task title..."
-                                    placeholderTextColor={theme.colors.textSecondary}
-                                    value={title}
-                                    onChangeText={setTitle}
-                                    autoFocus={!editingTask}
-                                />
-
-                                <TextInput
-                                    style={[styles.input, styles.textArea, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-                                    placeholder="Description (optional)..."
-                                    placeholderTextColor={theme.colors.textSecondary}
-                                    value={description}
-                                    onChangeText={setDescription}
-                                    multiline
-                                />
-
-                                <TextInput
-                                    style={[styles.input, styles.notesArea, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-                                    placeholder="Notes / comments..."
-                                    placeholderTextColor={theme.colors.textSecondary}
-                                    value={notes}
-                                    onChangeText={setNotes}
-                                    multiline
-                                />
-
-                                <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginBottom: 8, marginLeft: 4 }]}>PRIORITY</Text>
-                                <View style={[styles.statusScroll, { flexDirection: 'row' }]}>
-                                    {(['Low', 'Medium', 'High'] as const).map(p => (
-                                        <TouchableOpacity
-                                            key={p}
-                                            style={[
-                                                styles.statusChip,
-                                                {
-                                                    borderColor: priority === p ? (p === 'High' ? theme.colors.error : p === 'Medium' ? theme.colors.warning : theme.colors.success) : theme.colors.border,
-                                                    backgroundColor: priority === p ? (p === 'High' ? theme.colors.error + '15' : p === 'Medium' ? theme.colors.warning + '15' : theme.colors.success + '15') : 'transparent'
-                                                }
-                                            ]}
-                                            onPress={() => setPriority(p)}
-                                        >
-                                            <Text style={[
-                                                theme.typography.caption,
-                                                { color: priority === p ? (p === 'High' ? theme.colors.error : p === 'Medium' ? theme.colors.warning : theme.colors.success) : theme.colors.textSecondary, fontWeight: priority === p ? '700' : '400' }
-                                            ]}>
-                                                {p}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-
-                                <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginBottom: 8, marginLeft: 4 }]}>STATUS</Text>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statusScroll}>
-                                    {STATUSES.map(s => (
-                                        <TouchableOpacity
-                                            key={s}
-                                            style={[
-                                                styles.statusChip,
-                                                {
-                                                    borderColor: status === s ? theme.colors.primary : theme.colors.border,
-                                                    backgroundColor: status === s ? theme.colors.primary + '15' : 'transparent'
-                                                }
-                                            ]}
-                                            onPress={() => setStatus(s)}
-                                        >
-                                            <Text style={[
-                                                theme.typography.caption,
-                                                { color: status === s ? theme.colors.primary : theme.colors.textSecondary, fontWeight: status === s ? '700' : '400' }
-                                            ]}>
-                                                {s.charAt(0).toUpperCase() + s.slice(1)}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
-
-                                <TouchableOpacity
-                                    style={[styles.timePickerBtn, { borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-                                    onPress={togglePicker}
-                                >
-                                    <MaterialCommunityIcons name="bell-outline" size={20} color={theme.colors.primary} />
-                                    <Text style={[theme.typography.body2, { color: reminderTime ? theme.colors.text : theme.colors.textSecondary, marginLeft: 8, flex: 1 }]}>
-                                        {reminderTime ? `Reminder: ${reminderTime.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : "Set reminder (optional)"}
-                                    </Text>
-                                    {reminderTime && (
-                                        <TouchableOpacity onPress={() => setReminderTime(null)}>
-                                            <MaterialCommunityIcons name="close-circle" size={20} color={theme.colors.textSecondary} />
-                                        </TouchableOpacity>
-                                    )}
-                                </TouchableOpacity>
-
-                                <Button
-                                    title={editingTask ? "Update Task" : "Create Task"}
-                                    onPress={handleAddTask}
-                                    style={{ marginTop: 24, marginBottom: 40 }}
-                                />
+                            <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginBottom: 8, marginLeft: 4 }]}>STATUS</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statusScroll}>
+                                {STATUSES.map(s => (
+                                    <TouchableOpacity
+                                        key={s}
+                                        style={[
+                                            styles.statusChip,
+                                            {
+                                                borderColor: status === s ? theme.colors.primary : theme.colors.border,
+                                                backgroundColor: status === s ? theme.colors.primary + '15' : 'transparent'
+                                            }
+                                        ]}
+                                        onPress={() => setStatus(s)}
+                                    >
+                                        <Text style={[
+                                            theme.typography.caption,
+                                            { color: status === s ? theme.colors.primary : theme.colors.textSecondary, fontWeight: status === s ? '700' : '400' }
+                                        ]}>
+                                            {s.charAt(0).toUpperCase() + s.slice(1)}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
                             </ScrollView>
-                        </View>
+
+                            <TouchableOpacity
+                                style={[styles.timePickerBtn, { borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
+                                onPress={togglePicker}
+                            >
+                                <MaterialCommunityIcons name="bell-outline" size={20} color={theme.colors.primary} />
+                                <Text style={[theme.typography.body2, { color: reminderTime ? theme.colors.text : theme.colors.textSecondary, marginLeft: 8, flex: 1 }]}>
+                                    {reminderTime ? `Reminder: ${reminderTime.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : "Set reminder (optional)"}
+                                </Text>
+                                {reminderTime && (
+                                    <TouchableOpacity onPress={() => setReminderTime(null)}>
+                                        <MaterialCommunityIcons name="close-circle" size={20} color={theme.colors.textSecondary} />
+                                    </TouchableOpacity>
+                                )}
+                            </TouchableOpacity>
+
+                            <Button
+                                title={editingTask ? "Update Task" : "Create Task"}
+                                onPress={handleAddTask}
+                                style={{ marginTop: 24, marginBottom: 40 }}
+                            />
+                        </ScrollView>
                     </View>
-                </KeyboardAvoidingView>
+                </View>
             </Modal>
 
             {/* ── Clear Completed Confirmation Modal ── */}
